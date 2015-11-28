@@ -506,16 +506,16 @@
     <string name="my_schedule_page_desc_a11y">现在显示你的<xliff:g id="day">%1$s</xliff:g>日的日程安排</string>
 
     <!-- Menu item to open the Explore screen [CHAR_LIMIT=20] -->
-    <string name="navdrawer_item_explore">探索</string>
+    <string name="navdrawer_item_explore">我的照相机</string>
 
     <!-- Accessibility description for menu item to open the Explore screen. -->
     <string name="navdrawer_item_explore_a11y">探索Google I/O</string>
 
     <!-- Menu item to open the Map screen [CHAR_LIMIT=20] -->
-    <string name="navdrawer_item_map">地图</string>
+    <string name="navdrawer_item_map">我的位置</string>
 
     <!-- Menu item to open the My Schedule screen [CHAR_LIMIT=20] -->
-    <string name="navdrawer_item_my_schedule">我的日程</string>
+    <string name="navdrawer_item_my_schedule">我的视频记录</string>
 
     <!-- Menu item to open the Settings screen [CHAR_LIMIT=20] -->
     <string name="navdrawer_item_settings">设置</string>
@@ -811,13 +811,13 @@
     <string name="title_about">关于</string>
 
     <!-- Navigation bar text for exploring the sessions -->
-    <string name="title_explore">探索</string>
+    <string name="title_explore">我的照相机</string>
 
     <!-- Navigation bar text for the map -->
-    <string name="title_map">地图</string>
+    <string name="title_map">我的位置</string>
 
     <!-- Navigation bar text for viewing the user's schedule -->
-    <string name="title_my_schedule">我的日程</string>
+    <string name="title_my_schedule">我的视频记录</string>
 
     <!-- Navigation bar text for viewing Office Hours -->
     <string name="title_office_hours">办公时间</string>
