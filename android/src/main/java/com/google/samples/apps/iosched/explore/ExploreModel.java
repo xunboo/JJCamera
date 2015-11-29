@@ -24,6 +24,7 @@ import com.jjcamera.apps.iosched.explore.data.LiveStreamData;
 import com.jjcamera.apps.iosched.explore.data.SessionData;
 import com.jjcamera.apps.iosched.explore.data.ThemeGroup;
 import com.jjcamera.apps.iosched.explore.data.TopicGroup;
+import com.jjcamera.apps.iosched.explore.data.CameraData;
 import com.jjcamera.apps.iosched.framework.Model;
 import com.jjcamera.apps.iosched.framework.QueryEnum;
 import com.jjcamera.apps.iosched.framework.UserActionEnum;
@@ -80,8 +81,12 @@ public class ExploreModel implements Model {
 
     private LiveStreamData mLiveStreamData;
 
+	private CameraData mCameraData;
+
     public ExploreModel(Context context) {
         mContext = context;
+
+		mCameraData = new CameraData();
     }
 
     public Collection<TopicGroup> getTopics() {
@@ -97,6 +102,8 @@ public class ExploreModel implements Model {
     public SessionData getKeynoteData() { return mKeynoteData; }
 
     public LiveStreamData getLiveStreamData() { return mLiveStreamData; }
+
+	public CameraData getCameraData() { return mCameraData; }
 
 
     @Override

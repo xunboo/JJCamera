@@ -23,6 +23,7 @@ import com.jjcamera.apps.iosched.explore.data.MessageData;
 import com.jjcamera.apps.iosched.explore.data.SessionData;
 import com.jjcamera.apps.iosched.explore.data.ThemeGroup;
 import com.jjcamera.apps.iosched.explore.data.TopicGroup;
+import com.jjcamera.apps.iosched.explore.data.CameraData;
 import com.jjcamera.apps.iosched.framework.PresenterFragmentImpl;
 import com.jjcamera.apps.iosched.framework.QueryEnum;
 import com.jjcamera.apps.iosched.framework.UpdatableView;
@@ -89,6 +90,8 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
     private static final int GROUP_ID_TOPIC_CARDS = 30;
 
     private static final int GROUP_ID_THEME_CARDS = 40;
+
+	private static final int GROUP_ID_CAMERA_CARDS = 100;
 
     /**
      * Used to load images asynchronously on a background thread.
@@ -238,6 +241,7 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
         CollectionView.Inventory inventory = new CollectionView.Inventory();
         CollectionView.InventoryGroup inventoryGroup;
 
+        /*
         // BEGIN Add Message Cards.
         // Message cards are only used for onsite attendees.
         if (SettingsUtils.isAttendeeAtVenue(getContext())) {
@@ -302,9 +306,19 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
             }
         }
         // END Add Message Cards.
+        */
 
+        // Add Camera card.
+        CameraData cameraData = model.getCameraData();
+        if (cameraData != null) {       
+            LOGD(TAG, "Camera session data found: " + model.getCameraData());
+            inventoryGroup = new CollectionView.InventoryGroup
+                    (GROUP_ID_CAMERA_CARDS);
+            inventoryGroup.addItemWithTag(cameraData);
+            inventory.addGroup(inventoryGroup);
+        }
 
-        // Add Keynote card.
+ /*       // Add Keynote card.
         SessionData keynoteData = model.getKeynoteData();
         if (keynoteData != null) {
             LOGD(TAG, "Keynote Live stream data found: " + model.getKeynoteData());
@@ -312,18 +326,7 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
                     (GROUP_ID_KEYNOTE_STREAM_CARD);
             inventoryGroup.addItemWithTag(keynoteData);
             inventory.addGroup(inventoryGroup);
-        }
-
-        // Add Live Stream card.
-        LiveStreamData liveStreamData = model.getLiveStreamData();
-        if (liveStreamData != null && liveStreamData.getSessions().size() > 0) {
-            LOGD(TAG, "Live session data found: " + liveStreamData);
-            inventoryGroup = new CollectionView.InventoryGroup
-                    (GROUP_ID_LIVE_STREAM_CARD);
-            liveStreamData.setTitle(getResources().getString(R.string.live_now));
-            inventoryGroup.addItemWithTag(liveStreamData);
-            inventory.addGroup(inventoryGroup);
-        }
+        }		
 
         LOGD(TAG, "Inventory item count:" + inventory.getGroupCount() + " " + inventory
                 .getTotalItemCount());
@@ -372,7 +375,7 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
         // Append any leftovers.
         while (themeIterator.hasNext()) {
             inventory.addGroup(themeIterator.next());
-        }
+        }   */
 
         Parcelable state = mCollectionView.onSaveInstanceState();
         mCollectionView.setCollectionAdapter(this);
@@ -447,6 +450,7 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
         int numItems = 1;
         switch (groupId) {
             case GROUP_ID_KEYNOTE_STREAM_CARD:
+			case GROUP_ID_CAMERA_CARDS:	
                 itemLayoutId = R.layout.explore_io_keynote_stream_item;
                 numItems = 1;
                 break;
@@ -479,7 +483,7 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
     @Override
     public void bindCollectionItemView(Context context, View view, int groupId,
             int indexInGroup, int dataIndex, Object tag) {
-        if (GROUP_ID_KEYNOTE_STREAM_CARD == groupId ||
+        if (GROUP_ID_KEYNOTE_STREAM_CARD == groupId || GROUP_ID_CAMERA_CARDS == groupId || 
                 GROUP_ID_MESSAGE_CARDS == groupId) {
             // These two group id types don't have child views.
             populateSubItemInfo(context, view, groupId, tag);
@@ -560,6 +564,16 @@ public class ExploreIOFragment extends Fragment implements UpdatableView<Explore
                 descriptionView.setText(sessionData.getDetails());
             }
         }
+
+		if(GROUP_ID_CAMERA_CARDS == groupId) {
+            CameraData cameraData = (CameraData)tag;
+
+
+			//startButton.setVisibility(View.VISIBLE);
+			//endButton.setVisibility(View.VISIBLE);
+			titleView.setText(cameraData.getDevice());	
+            descriptionView.setText(cameraData.getDevice());		
+		}
 
         // Bind message data if this item is meant to be bound as a message card.
         if (GROUP_ID_MESSAGE_CARDS == groupId) {
