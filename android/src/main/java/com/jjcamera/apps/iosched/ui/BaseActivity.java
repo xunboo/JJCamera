@@ -84,6 +84,7 @@ import com.jjcamera.apps.iosched.framework.UpdatableView;
 import com.jjcamera.apps.iosched.framework.UserActionEnum;
 import com.jjcamera.apps.iosched.gcm.ServerUtilities;
 import com.jjcamera.apps.iosched.map.MapActivity;
+import com.jjcamera.apps.iosched.camera.CameraActivity;
 import com.jjcamera.apps.iosched.myschedule.MyScheduleActivity;
 import com.jjcamera.apps.iosched.provider.ScheduleContract;
 import com.jjcamera.apps.iosched.service.DataBootstrapService;
@@ -171,7 +172,7 @@ public abstract class BaseActivity extends AppCompatActivity implements
 
     protected static final int NAVDRAWER_ITEM_EXPLORE = 2;
 
-    protected static final int NAVDRAWER_ITEM_MAP = 3;
+    protected static final int NAVDRAWER_ITEM_MONITOR = 3;
 
     protected static final int NAVDRAWER_ITEM_SOCIAL = 4;
 
@@ -191,18 +192,22 @@ public abstract class BaseActivity extends AppCompatActivity implements
 
     protected static final int NAVDRAWER_ITEM_SEPARATOR_SPECIAL = -3;
 
+	protected static final int NAVDRAWER_ITEM_MAP = -1;
+
     // titles for navdrawer items (indices must correspond to the above)
     private static final int[] NAVDRAWER_TITLE_RES_ID = new int[]{
             R.string.navdrawer_item_my_schedule,
             R.string.navdrawer_item_io_live,
             R.string.navdrawer_item_explore,
-            R.string.navdrawer_item_map,
+            //R.string.navdrawer_item_map,
+            R.string.navdrawer_item_monitor,
             R.string.navdrawer_item_social,
             R.string.navdrawer_item_video_library,
             R.string.navdrawer_item_sign_in,
             R.string.navdrawer_item_settings,
             R.string.description_about,
-            R.string.navdrawer_item_debug
+            R.string.navdrawer_item_debug,
+            R.string.navdrawer_item_monitor
     };
 
     // icons for navdrawer items (indices must correspond to above array)
@@ -210,7 +215,8 @@ public abstract class BaseActivity extends AppCompatActivity implements
             R.drawable.ic_navview_my_schedule,  // My Schedule
             R.drawable.ic_navview_play_circle_fill, // I/O Live
             R.drawable.ic_navview_explore,  // Explore
-            R.drawable.ic_navview_map, // Map
+            //R.drawable.ic_navview_map, // Map
+            R.drawable.ic_navview_monitor, // Monitor
             R.drawable.ic_navview_social, // Social
             R.drawable.ic_navview_video_library, // Video Library
             0, // Sign in
@@ -502,9 +508,10 @@ public abstract class BaseActivity extends AppCompatActivity implements
         mNavDrawerItems.add(NAVDRAWER_ITEM_EXPLORE);
 
         // If the attendee is on-site, show Map on the nav drawer
-        if (attendeeAtVenue) {
+     /*   if (attendeeAtVenue) {
             mNavDrawerItems.add(NAVDRAWER_ITEM_MAP);
-        }
+        }*/
+        mNavDrawerItems.add(NAVDRAWER_ITEM_MONITOR);
         mNavDrawerItems.add(NAVDRAWER_ITEM_SEPARATOR);
 
         // Other items that are always in the nav drawer.
@@ -816,8 +823,11 @@ public abstract class BaseActivity extends AppCompatActivity implements
                 startActivity(new Intent(this, ExploreIOActivity.class));
                 finish();
                 break;
-            case NAVDRAWER_ITEM_MAP:
+            /*case NAVDRAWER_ITEM_MAP:
                 createBackStack(new Intent(this, MapActivity.class));
+                break;*/
+            case NAVDRAWER_ITEM_MONITOR:
+                createBackStack(new Intent(this, CameraActivity.class));
                 break;
             case NAVDRAWER_ITEM_SOCIAL:
                 createBackStack(new Intent(this, SocialActivity.class));

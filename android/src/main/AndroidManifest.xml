@@ -240,6 +240,7 @@
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
         </activity>
+
         <activity
             android:name=".feedback.SessionFeedbackActivity"
             android:label="@string/title_session_feedback"
@@ -312,7 +313,7 @@
         </activity>
 
         <activity
-            android:name=".map.MapActivity"
+            android:name=".camera.CameraActivity"
             android:exported="true"
             android:label="@string/title_map"
             android:parentActivityName=".explore.ExploreIOActivity"

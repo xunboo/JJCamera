@@ -25,6 +25,8 @@
     <!-- Text displayed in the Navigation Drawer for each respective menu item. -->
     <string name="navview_menu_item_map">Map</string>
     <!-- Text displayed in the Navigation Drawer for each respective menu item. -->
+    <string name="navview_menu_item_monitor">Monitor</string>
+    <!-- Text displayed in the Navigation Drawer for each respective menu item. -->   
     <string name="navview_menu_item_social">Social</string>
     <!-- Text displayed in the Navigation Drawer for each respective menu item. -->
     <string name="navview_menu_item_videos">Videos</string>

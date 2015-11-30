@@ -512,7 +512,10 @@
     <string name="navdrawer_item_explore_a11y">探索Google I/O</string>
 
     <!-- Menu item to open the Map screen [CHAR_LIMIT=20] -->
-    <string name="navdrawer_item_map">我的位置</string>
+    <string name="navdrawer_item_map">地图</string>
+
+    <!-- Menu item to open the Monitor screen [CHAR_LIMIT=20] -->
+    <string name="navdrawer_item_monitor">实况监视器</string>
 
     <!-- Menu item to open the My Schedule screen [CHAR_LIMIT=20] -->
     <string name="navdrawer_item_my_schedule">我的视频记录</string>
@@ -814,7 +817,7 @@
     <string name="title_explore">我的照相机</string>
 
     <!-- Navigation bar text for the map -->
-    <string name="title_map">我的位置</string>
+    <string name="title_map">实况监视器</string>
 
     <!-- Navigation bar text for viewing the user's schedule -->
     <string name="title_my_schedule">我的视频记录</string>

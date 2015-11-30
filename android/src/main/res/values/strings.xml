@@ -474,7 +474,10 @@
     <string name="navdrawer_item_explore_a11y">Explore Google I/O</string>
 
     <!-- Menu item to open the Map screen [CHAR_LIMIT=20] -->
-    <string name="navdrawer_item_map">My Location</string>
+    <string name="navdrawer_item_map">Map</string>
+
+     <!-- Menu item to open the Monitor screen [CHAR_LIMIT=20] -->
+    <string name="navdrawer_item_monitor">Live Monitor</string>   
 
     <!-- Menu item to open the My Schedule screen [CHAR_LIMIT=20] -->
     <string name="navdrawer_item_my_schedule">My Recording</string>
@@ -871,7 +874,7 @@ user updates the rating. -->
     <string name="title_explore">My Camera</string>
 
     <!-- Navigation bar text for the map -->
-    <string name="title_map">My Location</string>
+    <string name="title_map">Live Monitor</string>
 
     <!-- Navigation bar text for viewing the user's schedule -->
     <string name="title_my_schedule">My Recording</string>

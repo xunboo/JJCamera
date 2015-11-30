@@ -41,6 +41,12 @@
             android:title="@string/navview_menu_item_map"
             android:titleCondensed="@string/navview_menu_item_map"
             android:visible="false"/>
+        <item
+            android:id="@+id/nav_view_menu_item_monitor"
+            android:icon="@drawable/ic_navview_monitor"
+            android:title="@string/navview_menu_item_monitor"
+            android:titleCondensed="@string/navview_menu_item_monitor"
+            android:visible="false"/>          
     </group>
     <group
         android:id="@+id/navigation_view_menu_group_2"
