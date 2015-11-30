@@ -58,6 +58,13 @@
         Version %s
     ]]></string>
 
+     <string name="camera_main"><![CDATA[
+        <b>JJ Camera</b><br>
+        Version %s
+    ]]></string>
+
+    <string name="camera_test">Test Camera</string>
+
     <!-- Shown as a link in the About screen of the app; user can click to see the Terms of Services. -->
     <string name="about_terms">Terms of Service</string>
 

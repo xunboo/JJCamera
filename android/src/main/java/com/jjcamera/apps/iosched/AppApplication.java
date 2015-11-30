@@ -23,6 +23,8 @@ import com.jjcamera.apps.iosched.util.AnalyticsHelper;
 
 import android.app.Application;
 import android.content.Intent;
+import android.util.DisplayMetrics;
+
 
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGW;
@@ -38,11 +40,31 @@ public class AppApplication extends Application {
 
     private static final String TAG = makeLogTag(AppApplication.class);
 
+	private static DisplayMetrics     displayMetrics = null;
+
+	protected static AppApplication       mInstance;
+
+	public AppApplication(){
+        mInstance = this;
+    }
+
+    public static AppApplication getApp() {
+        if (mInstance != null && mInstance instanceof AppApplication) {
+            return (AppApplication) mInstance;
+        } else {
+            mInstance = new AppApplication();
+            mInstance.onCreate();
+            return (AppApplication) mInstance;
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         AnalyticsHelper.prepareAnalytics(getApplicationContext());
         SettingsUtils.markDeclinedWifiSetup(getApplicationContext(), false);
+
+		mInstance = this;
 
         // Ensure an updated security provider is installed into the system when a new one is
         // available via Google Play services.
@@ -64,4 +86,47 @@ public class AppApplication extends Application {
             LOGE(TAG, "Unknown issue trying to install a new security provider.", ignorable);
         }
     }
+
+
+	public float getScreenDensity() {
+		if (this.displayMetrics == null) {
+			setDisplayMetrics(getResources().getDisplayMetrics());
+		}
+		return this.displayMetrics.density;
+	}
+
+	public int getScreenHeight() {
+		if (this.displayMetrics == null) {
+			setDisplayMetrics(getResources().getDisplayMetrics());
+		}
+		return this.displayMetrics.heightPixels;
+	}
+
+	public int getScreenWidth() {
+		if (this.displayMetrics == null) {
+			setDisplayMetrics(getResources().getDisplayMetrics());
+		}
+		return this.displayMetrics.widthPixels;
+	}
+
+	public void setDisplayMetrics(DisplayMetrics DisplayMetrics) {
+		this.displayMetrics = DisplayMetrics;
+	}
+
+	public int dp2px(float f)
+	{
+		return (int)(0.5F + f * getScreenDensity());
+	}
+
+	public int px2dp(float pxValue) {
+		return (int) (pxValue / getScreenDensity() + 0.5f);
+	}
+
+	public String getFilesDirPath() {
+		return getFilesDir().getAbsolutePath();
+	}
+
+	public String getCacheDirPath() {
+		return getCacheDir().getAbsolutePath();
+	}
 }

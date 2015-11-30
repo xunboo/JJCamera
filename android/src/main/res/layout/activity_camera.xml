@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".social.SocialActivity">
+
+    <!-- Main layout -->
+    <com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout
+        android:id="@+id/main_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/light_grey"
+        app:shadowDrawable="@drawable/header_shadow">
+
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools"
+            android:id="@+id/camera_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:weightSum="1">
+
+
+            <TextView
+                android:id="@+id/camera_main"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/element_spacing_normal"
+                android:paddingBottom="@dimen/element_spacing_normal"
+                android:paddingLeft="@dimen/content_padding_dialog"
+                android:paddingRight="@dimen/content_padding_dialog"
+                android:paddingTop="8dp"
+                android:textSize="@dimen/text_size_medium"
+                tools:text="@string/camera_main" />
+
+            <TextView
+                android:id="@+id/camera_test"
+                style="@style/AboutLink"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/camera_test" />
+
+            <SurfaceView
+                android:id="@+id/surfaceView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.jjcamera.apps.iosched.camera.CameraGrid
+                android:id="@+id/masking"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@id/camera_main"
+                android:layout_alignParentTop="true" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/headerbar"
+            style="@style/HeaderBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:orientation="vertical">
+
+            <include layout="@layout/toolbar_actionbar" />
+            <!-- placeholder, empty except on L -->
+
+        </LinearLayout>
+
+
+    </com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout>
+
+    <!-- Nav drawer -->
+    <include layout="@layout/navdrawer" />
+
+</android.support.v4.widget.DrawerLayout>
