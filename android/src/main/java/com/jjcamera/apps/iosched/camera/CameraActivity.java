@@ -304,7 +304,6 @@ public class CameraActivity extends BaseActivity {
         LOGD(TAG, "default picture resolution " + defaultPictureResolution.width + "x"
                 + defaultPictureResolution.height);
 
-        // 排序
         List<Camera.Size> sortedSupportedPicResolutions = new ArrayList<Camera.Size>(
                 supportedPicResolutions);
         Collections.sort(sortedSupportedPicResolutions, new Comparator<Camera.Size>() {
