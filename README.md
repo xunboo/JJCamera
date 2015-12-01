@@ -1,42 +1,33 @@
-Google I/O Android App
+JJ Camero Android App
 ======================
 
-Google I/O is a developer conference held each year with two days of deep
-technical content featuring technical sessions and hundreds of demonstrations
-from developers showcasing their technologies.
+JJ Camero is an Google Android application to support peer to peer video transmit. 
 
-This project is the Android app for the conference. The app supports devices
+This project is the Android app for the camera video. The app supports devices
 running Android 4.0+, and is optimized for phones and tablets of all shapes
 and sizes.
 
+The UI is based Google I/O 2015 app sample, I hate UI programming!
+
 <h2>Source</h2>
 
-The source code in this repository reflects the app as of I/O 2015.
+The source code in this repository can be used to see how features of a video work .
 
 <h2>Features</h2>
 
 With the app, you can:
 
-- View the conference agenda and edit your personal schedule
-- Sync your schedule between all of your devices and the I/O website
-- View detailed session, code lab, office hours, and speaker information,
-  including speaker bios, photos, and Google+ profiles
-- Participate in public #io15 conversations on Google+
-- Guide yourself using the vector-based conference map
-- Get a reminder a few minutes before sessions in your schedule are due to
-  start
-- Play "I/O Live" session video streams
-- Send feedback on sessions, from your phone/tablet.
+- Setup phone camera as your local security monitor.
+- View your remote camera list at anywhere.
+- The video stream can be saved at the phone storage or uploaded to the remote cloud.
+- P2P technology to save bandwidth usage and increase mutilple devices to view
+- Let me think what need to do next...
 
 <h2>How to Work with the Source</h2>
 
 We hope the source code for this app is useful for you as a reference or starting point for creating your own apps. Here is some additional reading to help you better understand and reuse this code.
 
-  * [Build instructions](doc/BUILDING.md): instructions on how to build and run the code.
-  * [Sync protocol and data format](doc/SYNC.md)
-  * [Image loading](doc/IMAGES.md)
-  * [Use of GCM](doc/GCM.md)
-  * [Customization guide](doc/CUSTOM.md)
+TODO
 
 <h2>Copyright</h2>
 
