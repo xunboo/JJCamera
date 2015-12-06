@@ -31,7 +31,7 @@ TODO
 
 <h2>Contact</h2>
 
-Please feel free to cotact me by email:    wnlvcq(at)gmail.com
+Please feel free to contact me by email:    wnlvcq(at)gmail.com
 
 <h2>Copyright</h2>
 
