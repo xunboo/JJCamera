@@ -17,42 +17,27 @@
 package com.jjcamera.apps.iosched.camera;
 
 import com.jjcamera.apps.iosched.AppApplication;
-import com.jjcamera.apps.iosched.BuildConfig;
 import com.jjcamera.apps.iosched.R;
+import com.jjcamera.apps.iosched.streaming.rtsp.RtspServer;
 import com.jjcamera.apps.iosched.ui.BaseActivity;
 import com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout;
-import com.jjcamera.apps.iosched.util.AboutUtils;
 import com.jjcamera.apps.iosched.util.UIUtils;
 import com.jjcamera.apps.iosched.camera.util.CameraHelper;
 
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Html;
 import android.view.Surface;
 import android.view.View;
 import android.widget.TextView;
 import android.hardware.Camera;
-import android.os.AsyncTask;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
-import android.util.FloatMath;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.BitmapRegionDecoder;
-import android.graphics.Matrix;
 import android.graphics.PixelFormat;
-import android.graphics.Rect;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,6 +64,8 @@ public class CameraActivity extends BaseActivity {
     private static Camera.Parameters parameters = null;
     private static Camera cameraInst = null;
 
+    private static RtspServer mRtspServer = null;
+
     static final int FOCUS = 1;
     static final int ZOOM = 2;
     private int mode;
@@ -90,7 +77,7 @@ public class CameraActivity extends BaseActivity {
     private static Camera.Size adapterSize = null;
     private static Camera.Size previewSize = null;
 
-    private static boolean gbRecordInProgress = false;
+    private static boolean mMonitorInProgress = false;
 
     private View rootView;
     private SurfaceView surfaceView;
@@ -103,8 +90,15 @@ public class CameraActivity extends BaseActivity {
                     switchCamera();
                     break;
                 case R.id.camera_record:
-                    gbRecordInProgress = !gbRecordInProgress;
+                    mMonitorInProgress = !mMonitorInProgress;
                     RefreshMonitorText();
+
+                    if(mMonitorInProgress) {
+                        mRtspServer.start();
+                    }
+                    else {
+                        mRtspServer.stop();
+                    }
                     break;
             }
         }
@@ -112,7 +106,7 @@ public class CameraActivity extends BaseActivity {
 
     private void RefreshMonitorText(){
         TextView body = (TextView) rootView.findViewById(R.id.camera_main);
-        body.setText(gbRecordInProgress?R.string.record_start:R.string.record_stop);
+        body.setText(mMonitorInProgress ? R.string.record_start:R.string.record_stop);
     }
 
     @Override
@@ -126,8 +120,9 @@ public class CameraActivity extends BaseActivity {
         findViewById(R.id.masking).setVisibility(View.GONE);
 
         mCameraHelper = new CameraHelper(this);
-
-        gbRecordInProgress = false;
+        mRtspServer = new RtspServer();
+;
+        mMonitorInProgress = false;
         RefreshMonitorText();
 
         rootView.findViewById(R.id.camera_switch).setOnClickListener(mOnClickListener);
@@ -408,6 +403,9 @@ public class CameraActivity extends BaseActivity {
                     cameraInst.stopPreview();
                     cameraInst.release();
                     cameraInst = null;
+
+                    mRtspServer.stop();
+                    mRtspServer = null;
                 }
             } catch (Exception e) {
             }

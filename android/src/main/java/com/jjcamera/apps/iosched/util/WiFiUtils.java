@@ -43,8 +43,14 @@ import com.jjcamera.apps.iosched.Config;
 import com.jjcamera.apps.iosched.R;
 import com.jjcamera.apps.iosched.settings.SettingsUtils;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
 import java.util.List;
 
+import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGW;
 import static com.jjcamera.apps.iosched.util.LogUtils.makeLogTag;
 
@@ -287,5 +293,24 @@ public class WiFiUtils {
         conferenceConfig.preSharedKey = String.format("\"%s\"", BuildConfig.WIFI_PASSPHRASE);
 
         return conferenceConfig;
+    }
+
+    public static String getWifiIpAddress() {
+        try {
+            for (Enumeration en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = (NetworkInterface)en.nextElement();
+                for (Enumeration enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = (InetAddress)enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()&&inetAddress instanceof Inet4Address) {
+                        String ipAddress=inetAddress.getHostAddress().toString();
+                        LOGE("IP address  ",ipAddress);
+                        return ipAddress;
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            LOGE("Socket exception in GetIP Address of Utilities", ex.toString());
+        }
+        return null;
     }
 }
