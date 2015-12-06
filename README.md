@@ -29,6 +29,10 @@ We hope the source code for this app is useful for you as a reference or startin
 
 TODO
 
+<h2>Contact</h2>
+
+Please feel free to contact me by email:    wnlvcq(at)gmail.com
+
 <h2>Copyright</h2>
 
     Copyright 2014 Google Inc. All rights reserved.
