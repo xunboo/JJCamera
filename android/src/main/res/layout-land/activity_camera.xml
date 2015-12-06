@@ -22,8 +22,8 @@
             android:id="@+id/camera_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:weightSum="1">
+            android:weightSum="1"
+            android:baselineAligned="false">
 
             <SurfaceView
                 android:id="@+id/surfaceView"
@@ -32,25 +32,47 @@
                 android:adjustViewBounds="true"
                 android:layout_gravity="left|center_vertical" />
 
-            <TextView
-                android:id="@+id/camera_main"
-                android:layout_width="100dp"
-                android:layout_height="154dp"
-                android:layout_marginTop="@dimen/element_spacing_normal"
-                android:paddingBottom="@dimen/element_spacing_normal"
-                android:paddingLeft="@dimen/content_padding_dialog"
-                android:paddingRight="@dimen/content_padding_dialog"
-                android:paddingTop="8dp"
-                android:textSize="@dimen/text_size_medium"
-                tools:text="@string/camera_main"
-                android:layout_gravity="right" />
+            <LinearLayout
+                android:id="@+id/buttonPanel"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:weightSum="1"
+                android:baselineAligned="false"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/camera_test"
-                style="@style/AboutLink"
-                android:layout_width="match_parent"
-                android:layout_height="155dp"
-                android:text="@string/camera_test" />
+
+                <!-- placeholder, empty except on L -->
+
+                <TextView
+                    android:id="@+id/camera_main"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="@dimen/element_spacing_normal"
+                    android:paddingBottom="@dimen/element_spacing_normal"
+                    android:paddingLeft="@dimen/content_padding_dialog"
+                    android:paddingRight="@dimen/content_padding_dialog"
+                    android:paddingTop="8dp"
+                    android:textSize="@dimen/text_size_medium"
+                    tools:text="@string/camera_main"
+                    android:layout_gravity="bottom"
+                    android:layout_weight="0.33" />
+
+                <TextView
+                    android:id="@+id/camera_record"
+                    style="@style/AboutLink"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/camera_record"
+                    android:layout_weight="0.33" />
+
+                <TextView
+                    android:id="@+id/camera_switch"
+                    style="@style/AboutLink"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/camera_switch"
+                    android:layout_weight="0.33" />
+            </LinearLayout>
 
             <com.jjcamera.apps.iosched.camera.CameraGrid
                 android:id="@+id/masking"

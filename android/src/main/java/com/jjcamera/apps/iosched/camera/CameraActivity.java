@@ -29,6 +29,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
+import android.view.Surface;
 import android.view.View;
 import android.widget.TextView;
 import android.hardware.Camera;
@@ -89,6 +90,8 @@ public class CameraActivity extends BaseActivity {
     private static Camera.Size adapterSize = null;
     private static Camera.Size previewSize = null;
 
+    private static boolean gbRecordInProgress = false;
+
     private View rootView;
     private SurfaceView surfaceView;
 
@@ -96,12 +99,21 @@ public class CameraActivity extends BaseActivity {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
-                case R.id.camera_test:
+                case R.id.camera_switch:
                     switchCamera();
+                    break;
+                case R.id.camera_record:
+                    gbRecordInProgress = !gbRecordInProgress;
+                    RefreshMonitorText();
                     break;
             }
         }
     };
+
+    private void RefreshMonitorText(){
+        TextView body = (TextView) rootView.findViewById(R.id.camera_main);
+        body.setText(gbRecordInProgress?R.string.record_start:R.string.record_stop);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,9 +127,11 @@ public class CameraActivity extends BaseActivity {
 
         mCameraHelper = new CameraHelper(this);
 
-        TextView body = (TextView) rootView.findViewById(R.id.camera_main);
-        body.setText(Html.fromHtml(getString(R.string.camera_main, BuildConfig.VERSION_NAME)));
-        rootView.findViewById(R.id.camera_test).setOnClickListener(mOnClickListener);
+        gbRecordInProgress = false;
+        RefreshMonitorText();
+
+        rootView.findViewById(R.id.camera_switch).setOnClickListener(mOnClickListener);
+        rootView.findViewById(R.id.camera_record).setOnClickListener(mOnClickListener);
 
         overridePendingTransition(0, 0);
 
@@ -349,7 +363,24 @@ public class CameraActivity extends BaseActivity {
 
     private void setDispaly(Camera.Parameters parameters, Camera camera) {
         if (Build.VERSION.SDK_INT >= 8) {
-            setDisplayOrientation(camera, 90);
+            int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
+            int degrees = 0;
+            switch (rotation) {
+                case Surface.ROTATION_0:
+                    degrees = 90;
+                    break;
+                case Surface.ROTATION_90:
+                    degrees = 0;
+                    break;
+                case Surface.ROTATION_180:
+                    degrees = 90;
+                    break;
+                case Surface.ROTATION_270:
+                    degrees = 180;
+                    break;
+            }
+
+            setDisplayOrientation(camera, degrees);
         } else {
             parameters.setRotation(90);
         }

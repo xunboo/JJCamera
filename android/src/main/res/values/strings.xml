@@ -63,7 +63,11 @@
         Version %s
     ]]></string>
 
-    <string name="camera_test">Test Camera</string>
+    <string name="camera_switch">Switch Camera</string>
+    <string name="camera_record">Record</string>
+
+    <string name="record_start">Record start</string>
+    <string name="record_stop">Record stop</string>
 
     <!-- Shown as a link in the About screen of the app; user can click to see the Terms of Services. -->
     <string name="about_terms">Terms of Service</string>
