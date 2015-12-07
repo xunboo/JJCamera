@@ -51,6 +51,7 @@ import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 
+
 /**
  * Implementation of a subset of the RTSP protocol (RFC 2326).
  * 
@@ -315,6 +316,7 @@ public class RtspServer extends Service {
 	protected Session handleRequest(String uri, Socket client) throws IllegalStateException, IOException {
 		Session session = UriParser.parse(uri);
 		session.setOrigin(client.getLocalAddress().getHostAddress());
+
 		if (session.getDestination()==null) {
 			session.setDestination(client.getInetAddress().getHostAddress());
 		}

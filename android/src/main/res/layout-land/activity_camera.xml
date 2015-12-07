@@ -25,7 +25,7 @@
             android:weightSum="1"
             android:baselineAligned="false">
 
-            <SurfaceView
+            <com.jjcamera.apps.iosched.streaming.gl.SurfaceView
                 android:id="@+id/surfaceView"
                 android:layout_width="401dp"
                 android:layout_height="match_parent"

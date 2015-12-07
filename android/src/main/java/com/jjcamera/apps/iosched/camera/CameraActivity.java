@@ -18,15 +18,21 @@ package com.jjcamera.apps.iosched.camera;
 
 import com.jjcamera.apps.iosched.AppApplication;
 import com.jjcamera.apps.iosched.R;
+import com.jjcamera.apps.iosched.streaming.SessionBuilder;
 import com.jjcamera.apps.iosched.streaming.rtsp.RtspServer;
+import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
 import com.jjcamera.apps.iosched.ui.BaseActivity;
 import com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout;
 import com.jjcamera.apps.iosched.util.UIUtils;
 import com.jjcamera.apps.iosched.camera.util.CameraHelper;
 
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.Surface;
 import android.view.View;
 import android.widget.TextView;
@@ -34,7 +40,7 @@ import android.hardware.Camera;
 import android.os.Build;
 import android.os.Handler;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+//import android.view.SurfaceView;
 import android.graphics.PixelFormat;
 
 import java.io.IOException;
@@ -47,8 +53,10 @@ import java.util.List;
 
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGD;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
+import static com.jjcamera.apps.iosched.util.LogUtils.LOGI;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGV;
 import static com.jjcamera.apps.iosched.util.LogUtils.makeLogTag;
+
 
 public class CameraActivity extends BaseActivity {
 
@@ -82,6 +90,7 @@ public class CameraActivity extends BaseActivity {
     private View rootView;
     private SurfaceView surfaceView;
 
+
     private View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -109,6 +118,42 @@ public class CameraActivity extends BaseActivity {
         body.setText(mMonitorInProgress ? R.string.record_start:R.string.record_stop);
     }
 
+    private ServiceConnection mRtspServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mRtspServer = (RtspServer) ((RtspServer.LocalBinder)service).getService();
+            mRtspServer.addCallbackListener(mRtspCallbackListener);
+            mRtspServer.start();
+			LOGI(TAG, "the RTSP service is started");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {}
+
+    };
+
+    private RtspServer.CallbackListener mRtspCallbackListener = new RtspServer.CallbackListener() {
+
+        @Override
+        public void onError(RtspServer server, Exception e, int error) {
+            // We alert the user that the port is already used by another app.
+            if (error == RtspServer.ERROR_BIND_FAILED) {
+                LOGE(TAG, "the RTSP port is already used by another app");
+            }
+        }
+
+        @Override
+        public void onMessage(RtspServer server, int message) {
+            if (message==RtspServer.MESSAGE_STREAMING_STARTED) {
+                LOGI(TAG, "the RTSP streaming is started");
+            } else if (message==RtspServer.MESSAGE_STREAMING_STOPPED) {
+                LOGI(TAG, "the RTSP streaming is stopped");
+            }
+        }
+
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,8 +165,13 @@ public class CameraActivity extends BaseActivity {
         findViewById(R.id.masking).setVisibility(View.GONE);
 
         mCameraHelper = new CameraHelper(this);
-        mRtspServer = new RtspServer();
-;
+
+        this.startService(new Intent(this,RtspServer.class));
+        //mRtspServer = new RtspServer();
+		
+		SessionBuilder.getInstance().setSurfaceView(surfaceView);
+		SessionBuilder.getInstance().setPreviewOrientation(90);
+		
         mMonitorInProgress = false;
         RefreshMonitorText();
 
@@ -133,13 +183,33 @@ public class CameraActivity extends BaseActivity {
         initView();
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        bindService(new Intent(this, RtspServer.class), mRtspServiceConnection, Context.BIND_AUTO_CREATE);
+
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        if (mRtspServer != null){
+            mRtspServer.removeCallbackListener(mRtspCallbackListener);
+            mRtspServer.stop();
+            LOGI(TAG, "the RTSP service is stopped");
+        }
+        unbindService(mRtspServiceConnection);
+    }
+
     private void initView() {
         SurfaceHolder surfaceHolder = surfaceView.getHolder();
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         surfaceHolder.setKeepScreenOn(true);
         surfaceView.setFocusable(true);
         surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
-        surfaceView.getHolder().addCallback(new SurfaceCallback());
+        //surfaceView.getHolder().addCallback(new SurfaceCallback());
 
 
         boolean canSwitch = false;
@@ -500,5 +570,9 @@ public class CameraActivity extends BaseActivity {
         }
         return c;
     }
+
+	public static Camera getCurrentCameraInst(){
+		return cameraInst;
+	}
 
 }

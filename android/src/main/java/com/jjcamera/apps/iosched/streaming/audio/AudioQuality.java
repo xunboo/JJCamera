@@ -56,7 +56,7 @@ public class AudioQuality {
 
 	public static AudioQuality parseQuality(String str) {
 		AudioQuality quality = DEFAULT_AUDIO_QUALITY.clone();
-		if (str != null) {
+		if (str != null && str.length() > 0) {
 			String[] config = str.split("-");
 			try {
 				quality.bitRate = Integer.parseInt(config[0])*1000; // conversion to bit/s

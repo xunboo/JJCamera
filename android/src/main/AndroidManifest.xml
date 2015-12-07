@@ -441,6 +441,8 @@
         -->
         <service android:name=".gcm.GCMIntentService" />
 
+        <service android:name="com.jjcamera.apps.iosched.streaming.rtsp.RtspServer"/>
+
         <!-- Data, sync and schedule editing components -->
 
         <provider
