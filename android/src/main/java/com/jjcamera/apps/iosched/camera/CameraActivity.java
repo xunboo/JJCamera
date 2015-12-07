@@ -102,12 +102,12 @@ public class CameraActivity extends BaseActivity {
                     mMonitorInProgress = !mMonitorInProgress;
                     RefreshMonitorText();
 
-                    if(mMonitorInProgress) {
+                 /*   if(mMonitorInProgress) {
                         mRtspServer.start();
                     }
                     else {
                         mRtspServer.stop();
-                    }
+                    }*/
                     break;
             }
         }
@@ -166,11 +166,10 @@ public class CameraActivity extends BaseActivity {
 
         mCameraHelper = new CameraHelper(this);
 
-        this.startService(new Intent(this,RtspServer.class));
-        //mRtspServer = new RtspServer();
-		
 		SessionBuilder.getInstance().setSurfaceView(surfaceView);
 		SessionBuilder.getInstance().setPreviewOrientation(90);
+
+        this.startService(new Intent(this,RtspServer.class));
 		
         mMonitorInProgress = false;
         RefreshMonitorText();

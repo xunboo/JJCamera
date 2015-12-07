@@ -302,7 +302,7 @@ public class AACStream extends AudioStream {
 			}
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
+		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/jjcamera-test.adts";
 
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");

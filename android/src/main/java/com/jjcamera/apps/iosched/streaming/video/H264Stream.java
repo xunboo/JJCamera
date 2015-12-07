@@ -125,10 +125,10 @@ public class H264Stream extends VideoStream {
 		createCamera();
 		updateCamera();
 		try {
-			if (mQuality.resX>=640) {
+		/*	if (mQuality.resX>=640) {
 				// Using the MediaCodec API with the buffer method for high resolutions is too slow
 				mMode = MODE_MEDIARECORDER_API;
-			}
+			}*/
 			EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 			return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
 		} catch (Exception e) {
@@ -154,7 +154,7 @@ public class H264Stream extends VideoStream {
 			throw new StorageUnavailableException("No external storage or external storage not ready !");
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.mp4";
+		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/jjcamera-test.mp4";
 		
 		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
 

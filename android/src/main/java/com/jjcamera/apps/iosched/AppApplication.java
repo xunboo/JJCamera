@@ -20,6 +20,8 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 import com.jjcamera.apps.iosched.settings.SettingsUtils;
 import com.jjcamera.apps.iosched.util.AnalyticsHelper;
+import com.jjcamera.apps.iosched.streaming.SessionBuilder;
+import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
 
 import android.app.Application;
 import android.content.Intent;
@@ -29,6 +31,7 @@ import android.util.DisplayMetrics;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGW;
 import static com.jjcamera.apps.iosched.util.LogUtils.makeLogTag;
+
 
 /**
  * {@link android.app.Application} used to initialize Analytics. Code initialized in
@@ -43,6 +46,15 @@ public class AppApplication extends Application {
 	private static DisplayMetrics     displayMetrics = null;
 
 	protected static AppApplication       mInstance;
+
+	/** Default quality of video streams. */
+	public VideoQuality videoQuality = new VideoQuality(640,480,20,500000);
+
+	/** By default AMR is the audio encoder. */
+	public int audioEncoder = SessionBuilder.AUDIO_AAC;
+
+	/** By default H.264 is the video encoder. */
+	public int videoEncoder = SessionBuilder.VIDEO_H264;
 
 	public AppApplication(){
         mInstance = this;
@@ -85,6 +97,11 @@ public class AppApplication extends Application {
         } catch (Exception ignorable) {
             LOGE(TAG, "Unknown issue trying to install a new security provider.", ignorable);
         }
+
+		SessionBuilder.getInstance() 
+			.setContext(getApplicationContext())
+			.setAudioEncoder(audioEncoder)
+			.setVideoEncoder(videoEncoder);
     }
 
 
