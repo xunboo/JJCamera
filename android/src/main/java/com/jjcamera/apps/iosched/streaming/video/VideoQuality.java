@@ -109,7 +109,7 @@ public class VideoQuality {
 		VideoQuality v = quality.clone();
 		int minDist = Integer.MAX_VALUE;
 		String supportedSizesStr = "Supported resolutions: ";
-		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
+		List<Size> supportedSizes = parameters.getSupportedVideoSizes(); //parameters.getSupportedPreviewSizes();
 		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
 			Size size = it.next();
 			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");

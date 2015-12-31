@@ -89,29 +89,29 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 			while (!Thread.interrupted()) {
 
 				buffer = socket.requestBuffer();
-				buffer[rtphl] = (byte) 0xF0;
+				buffer.mBuffers[rtphl] = (byte) 0xF0;
 				
 				// First we read the frame header
-				fill(buffer, rtphl+1,AMR_FRAME_HEADER_LENGTH);
+				fill(buffer.mBuffers, rtphl+1,AMR_FRAME_HEADER_LENGTH);
 
 				// Then we calculate the frame payload length
-				frameType = (Math.abs(buffer[rtphl + 1]) >> 3) & 0x0f;
+				frameType = (Math.abs(buffer.mBuffers[rtphl + 1]) >> 3) & 0x0f;
 				frameLength = (sFrameBits[frameType]+7)/8;
 
 				// And we read the payload
-				fill(buffer, rtphl+2,frameLength);
+				fill(buffer.mBuffers, rtphl+2,frameLength);
 
 				//Log.d(TAG,"Frame length: "+frameLength+" frameType: "+frameType);
 
 				// RFC 3267 Page 14: "For AMR, the sampling frequency is 8 kHz"
 				// FIXME: Is this really always the case ??
 				ts += 160L*1000000000L/samplingRate; //stats.average();
-				socket.updateTimestamp(ts);
-				socket.markNextPacket();
+				socket.updateTimestamp(buffer, ts);
+				socket.markNextPacket(buffer.mBuffers);
 
 				//Log.d(TAG,"expected: "+ expected + " measured: "+measured);
 				
-				send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
+				send(buffer, rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
 				
 			}
 

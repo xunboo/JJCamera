@@ -27,10 +27,12 @@
 
             <com.jjcamera.apps.iosched.streaming.gl.SurfaceView
                 android:id="@+id/surfaceView"
-                android:layout_width="401dp"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:adjustViewBounds="true"
-                android:layout_gravity="left|center_vertical" />
+                android:layout_gravity="left|center_horizontal"
+                android:background="@drawable/view_border"
+                android:layout_weight="1" />
 
             <LinearLayout
                 android:id="@+id/buttonPanel"
@@ -45,7 +47,7 @@
 
                 <TextView
                     android:id="@+id/camera_main"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_marginTop="@dimen/element_spacing_normal"
                     android:paddingBottom="@dimen/element_spacing_normal"
@@ -53,25 +55,26 @@
                     android:paddingRight="@dimen/content_padding_dialog"
                     android:paddingTop="8dp"
                     android:textSize="@dimen/text_size_medium"
-                    tools:text="@string/camera_main"
-                    android:layout_gravity="bottom"
-                    android:layout_weight="0.33" />
+                    tools:text=""
+                    android:layout_weight=".33" />
 
-                <TextView
+                <Button
                     android:id="@+id/camera_record"
                     style="@style/AboutLink"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="match_parent"
-                    android:text="@string/camera_record"
-                    android:layout_weight="0.33" />
+                    android:text= "@string/camera_record"
+                    android:layout_weight="0.33"
+                    android:layout_gravity="left" />
 
-                <TextView
+                <Button
                     android:id="@+id/camera_switch"
                     style="@style/AboutLink"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:text="@string/camera_switch"
-                    android:layout_weight="0.33" />
+                    android:layout_weight="0.33"
+                    android:layout_gravity="left" />
             </LinearLayout>
 
             <com.jjcamera.apps.iosched.camera.CameraGrid

@@ -183,6 +183,8 @@ public class EncoderDebugger {
 			mB64PPS = mPreferences.getString(PREF_PREFIX+resolution+"pps", "");
 			mB64SPS = mPreferences.getString(PREF_PREFIX+resolution+"sps", "");
 
+			Log.v(TAG, "The encoder "+mEncoderName+" is usable with resolution "+mWidth+"x"+mHeight);
+
 			return;
 		}
 
@@ -291,7 +293,7 @@ public class EncoderDebugger {
 					}
 
 					saveTestResult(true);
-					Log.v(TAG, "The encoder "+mEncoderName+" is usable with resolution "+mWidth+"x"+mHeight);
+					Log.v(TAG, "The encoder "+mEncoderName+" was tested and is usable with resolution "+mWidth+"x"+mHeight);
 					return;
 
 				} catch (Exception e) {

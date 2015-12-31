@@ -22,10 +22,16 @@ import com.jjcamera.apps.iosched.settings.SettingsUtils;
 import com.jjcamera.apps.iosched.util.AnalyticsHelper;
 import com.jjcamera.apps.iosched.streaming.SessionBuilder;
 import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
+import com.jjcamera.apps.iosched.streaming.rtsp.RtspServer;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.ComponentName;
+import android.os.IBinder;
 import android.util.DisplayMetrics;
+
 
 
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
@@ -45,16 +51,9 @@ public class AppApplication extends Application {
 
 	private static DisplayMetrics     displayMetrics = null;
 
-	protected static AppApplication       mInstance;
-
-	/** Default quality of video streams. */
-	public VideoQuality videoQuality = new VideoQuality(640,480,20,500000);
-
-	/** By default AMR is the audio encoder. */
-	public int audioEncoder = SessionBuilder.AUDIO_AAC;
-
-	/** By default H.264 is the video encoder. */
-	public int videoEncoder = SessionBuilder.VIDEO_H264;
+	protected static AppApplication		mInstance;
+	
+    private static RtspServer mRtspServer = null;
 
 	public AppApplication(){
         mInstance = this;
@@ -99,9 +98,58 @@ public class AppApplication extends Application {
         }
 
 		SessionBuilder.getInstance() 
-			.setContext(getApplicationContext())
-			.setAudioEncoder(audioEncoder)
-			.setVideoEncoder(videoEncoder);
+			.setContext(getApplicationContext());
+
+		this.startService(new Intent(this,RtspServer.class));	
+        bindService(new Intent(this, RtspServer.class), mRtspServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+	private ServiceConnection mRtspServiceConnection = new ServiceConnection() {
+	
+		 @Override
+		 public void onServiceConnected(ComponentName name, IBinder service) {
+			 mRtspServer = (RtspServer) ((RtspServer.LocalBinder)service).getService();
+			 mRtspServer.addCallbackListener(mRtspCallbackListener);
+			 mRtspServer.start();
+			 LOGW(TAG, "the RTSP service is started");
+		 }
+	
+		 @Override
+		 public void onServiceDisconnected(ComponentName name) {}
+	
+	 };
+	
+	 private RtspServer.CallbackListener mRtspCallbackListener = new RtspServer.CallbackListener() {
+	
+		 @Override
+		 public void onError(RtspServer server, Exception e, int error) {
+			 // We alert the user that the port is already used by another app.
+			 if (error == RtspServer.ERROR_BIND_FAILED) {
+				 LOGE(TAG, "the RTSP port is already used by another app");
+			 }
+		 }
+	
+		 @Override
+		 public void onMessage(RtspServer server, int message) {
+			 if (message==RtspServer.MESSAGE_STREAMING_STARTED) {
+				 LOGW(TAG, "the RTSP streaming is started");
+			 } else if (message==RtspServer.MESSAGE_STREAMING_STOPPED) {
+				 LOGW(TAG, "the RTSP streaming is stopped");
+			 }
+		 }
+	
+	 };
+
+    @Override
+    public void onTerminate() {
+		if (mRtspServer != null){
+			mRtspServer.removeCallbackListener(mRtspCallbackListener);
+			mRtspServer.stop();
+			LOGW(TAG, "the RTSP service is stopped");
+		}
+		unbindService(mRtspServiceConnection);
+
+        super.onTerminate();
     }
 
 

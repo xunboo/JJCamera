@@ -63,7 +63,7 @@
         Version %s
     ]]></string>
 
-    <string name="camera_switch">Switch Camera</string>
+    <string name="camera_switch">Switch&#10;Camera</string>
     <string name="camera_record">Record</string>
 
     <string name="record_start">Record start</string>

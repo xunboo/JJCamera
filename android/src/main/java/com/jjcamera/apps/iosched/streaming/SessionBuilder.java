@@ -31,7 +31,9 @@ import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
 import com.jjcamera.apps.iosched.streaming.video.H264Stream;
 import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
 import com.jjcamera.apps.iosched.streaming.video.VideoStream;
+
 import android.content.Context;
+import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
 
@@ -64,8 +66,8 @@ public class SessionBuilder {
 	private VideoQuality mVideoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
 	private AudioQuality mAudioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
 	private Context mContext;
-	private int mVideoEncoder = VIDEO_H264; 
-	private int mAudioEncoder = AUDIO_AMRNB;
+	private int mVideoEncoder = AUDIO_NONE;
+	private int mAudioEncoder = AUDIO_NONE;
 	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
 	private int mTimeToLive = 64;
 	private int mOrientation = 0;
@@ -74,6 +76,7 @@ public class SessionBuilder {
 	private String mOrigin = null;
 	private String mDestination = null;
 	private Session.Callback mCallback = null;
+	private Camera mCameraInst;
 
 	// Removes the default public constructor
 	private SessionBuilder() {}
@@ -136,6 +139,8 @@ public class SessionBuilder {
 
 		if (session.getVideoTrack()!=null) {
 			VideoStream video = session.getVideoTrack();
+			if(mCameraInst!=null)
+				video.setUsedCamera(mCameraInst);	
 			video.setFlashState(mFlash);
 			video.setVideoQuality(mVideoQuality);
 			video.setSurfaceView(mSurfaceView);
@@ -234,6 +239,15 @@ public class SessionBuilder {
 		mCallback = callback;
 		return this;
 	}
+
+	/** 
+	 * Sets the current running camera.
+	 * @param camera, The instance of the camera
+	 */
+	public SessionBuilder setCameraInst(Camera camera) {
+		mCameraInst = camera;
+		return this;
+	}
 	
 	/** Returns the context set with {@link #setContext(Context)}*/
 	public Context getContext() {
@@ -285,7 +299,6 @@ public class SessionBuilder {
 		return mSurfaceView;
 	}
 	
-	
 	/** Returns the time to live set with {@link #setTimeToLive(int)}. */
 	public int getTimeToLive() {
 		return mTimeToLive;
@@ -306,7 +319,8 @@ public class SessionBuilder {
 		.setAudioEncoder(mAudioEncoder)
 		.setAudioQuality(mAudioQuality)
 		.setContext(mContext)
-		.setCallback(mCallback);
+		.setCallback(mCallback)
+		.setCameraInst(mCameraInst);
 	}
 
 }

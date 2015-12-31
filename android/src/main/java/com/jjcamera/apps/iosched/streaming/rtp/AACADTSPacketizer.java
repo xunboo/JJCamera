@@ -130,7 +130,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				while (sum<frameLength) {
 
 					buffer = socket.requestBuffer();
-					socket.updateTimestamp(ts);
+					socket.updateTimestamp(buffer, ts);
 
 					// Read frame
 					if (frameLength-sum > MAXPACKETSIZE-rtphl-4) {
@@ -138,26 +138,26 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 					}
 					else {
 						length = frameLength-sum;
-						socket.markNextPacket();
+						socket.markNextPacket(buffer.mBuffers);
 					}
 					sum += length;
-					fill(buffer, rtphl+4, length);
+					fill(buffer.mBuffers, rtphl+4, length);
 
 					// AU-headers-length field: contains the size in bits of a AU-header
 					// 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta 
 					// 13 bits will be enough because ADTS uses 13 bits for frame length
-					buffer[rtphl] = 0;
-					buffer[rtphl+1] = 0x10; 
+					buffer.mBuffers[rtphl] = 0;
+					buffer.mBuffers[rtphl+1] = 0x10;
 
 					// AU-size
-					buffer[rtphl+2] = (byte) (frameLength>>5);
-					buffer[rtphl+3] = (byte) (frameLength<<3);
+					buffer.mBuffers[rtphl+2] = (byte) (frameLength>>5);
+					buffer.mBuffers[rtphl+3] = (byte) (frameLength<<3);
 
 					// AU-Index
-					buffer[rtphl+3] &= 0xF8;
-					buffer[rtphl+3] |= 0x00;
+					buffer.mBuffers[rtphl+3] &= 0xF8;
+					buffer.mBuffers[rtphl+3] |= 0x00;
 
-					send(rtphl+4+length);
+					send(buffer, rtphl+4+length);
 
 				}
 

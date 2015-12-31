@@ -43,25 +43,59 @@ import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
 import android.content.ContentValues;
 import android.hardware.Camera.CameraInfo;
 
+
 /**
  * This class parses URIs received by the RTSP server and configures a Session accordingly.
  */
 public class UriParser {
 
 	public final static String TAG = "UriParser";
+
 	
-	/**
-	 * Configures a Session according to the given URI.
-	 * Here are some examples of URIs that can be used to configure a Session:
-	 * <ul><li>rtsp://xxx.xxx.xxx.xxx:8086?h264&flash=on</li>
-	 * <li>rtsp://xxx.xxx.xxx.xxx:8086?h263&camera=front&flash=on</li>
-	 * <li>rtsp://xxx.xxx.xxx.xxx:8086?h264=200-20-320-240</li>
-	 * <li>rtsp://xxx.xxx.xxx.xxx:8086?aac</li></ul>
-	 * @param uri The URI
-	 * @throws IllegalStateException
-	 * @throws IOException
-	 * @return A Session configured according to the URI
-	 */
+	/** Default quality of audio streams. */
+	public static AudioQuality audioQuality = new AudioQuality(8000,32000);
+
+	/** Default quality of video streams. */
+	public static VideoQuality videoQuality = new VideoQuality(1280,720,20,5000000);
+
+	/** By default AMR is the audio encoder. */
+	public static int audioEncoder = SessionBuilder.AUDIO_AAC;
+
+	/** By default H.264 is the video encoder. */
+	public static int videoEncoder = SessionBuilder.VIDEO_H264;
+
+
+	public static Session easyparse() throws IllegalStateException, IOException {
+		byte audioApi = MediaStream.MODE_MEDIARECORDER_API;
+		byte videoApi = MediaStream.MODE_MEDIARECORDER_API;
+		//byte videoApi = MediaStream.MODE_MEDIACODEC_API;	
+		
+		SessionBuilder builder = SessionBuilder.getInstance().clone();
+
+		if(videoApi == MediaStream.MODE_MEDIACODEC_API)		//test purpose
+			videoQuality = new VideoQuality(640,480,20,500000);
+
+		builder.setFlashEnabled(false);
+		builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
+
+		builder.setVideoQuality(videoQuality).setVideoEncoder(videoEncoder);
+		//builder.setAudioQuality(audioQuality).setAudioEncoder(audioEncoder);
+
+		Session session = builder.build();
+		
+		if (session.getVideoTrack() != null) {
+			session.getVideoTrack().setStreamingMethod(videoApi);
+		}
+		
+		if (session.getAudioTrack() != null) {
+			session.getAudioTrack().setStreamingMethod(audioApi);
+		}
+
+		return session;
+	}
+
+
+	
 	public static Session parse(String uri) throws IllegalStateException, IOException {
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
 		byte audioApi = 0, videoApi = 0;

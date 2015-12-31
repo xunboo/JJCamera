@@ -24,13 +24,15 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:weightSum="1">>
+
             <com.jjcamera.apps.iosched.streaming.gl.SurfaceView
                 android:id="@+id/surfaceView"
                 android:layout_width="match_parent"
-                android:layout_height="401dp"
+                android:layout_height="wrap_content"
                 android:adjustViewBounds="true"
                 android:layout_gravity="center_horizontal|top"
-                android:layout_weight="1"/>
+                android:layout_weight="1"
+                android:background="@drawable/view_border" />
 
             <LinearLayout
                 android:id="@+id/buttonPanel"
@@ -53,7 +55,7 @@
                     android:paddingRight="@dimen/content_padding_dialog"
                     android:paddingTop="8dp"
                     android:textSize="@dimen/text_size_medium"
-                    tools:text="@string/camera_main"
+                    tools:text=""
                     android:layout_gravity="bottom"
                     android:layout_weight="0.33" />
 

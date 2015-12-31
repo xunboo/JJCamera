@@ -18,23 +18,30 @@ package com.jjcamera.apps.iosched.camera;
 
 import com.jjcamera.apps.iosched.AppApplication;
 import com.jjcamera.apps.iosched.R;
-import com.jjcamera.apps.iosched.streaming.SessionBuilder;
-import com.jjcamera.apps.iosched.streaming.rtsp.RtspServer;
-import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
+import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
 import com.jjcamera.apps.iosched.ui.BaseActivity;
 import com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout;
 import com.jjcamera.apps.iosched.util.UIUtils;
 import com.jjcamera.apps.iosched.camera.util.CameraHelper;
+import com.jjcamera.apps.iosched.streaming.MediaStream;
+import com.jjcamera.apps.iosched.streaming.Session;
+import com.jjcamera.apps.iosched.streaming.SessionBuilder;
+import com.jjcamera.apps.iosched.streaming.audio.AudioQuality;
+import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
+import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
+import com.jjcamera.apps.iosched.streaming.video.H264Stream;
 
-import android.content.ComponentName;
-import android.content.Context;
+
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.view.Surface;
+import android.view.TextureView;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.hardware.Camera;
 import android.os.Build;
@@ -43,6 +50,7 @@ import android.view.SurfaceHolder;
 //import android.view.SurfaceView;
 import android.graphics.PixelFormat;
 
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -50,6 +58,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGD;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
@@ -71,8 +80,7 @@ public class CameraActivity extends BaseActivity {
     private static int mCurrentCameraId = 0;
     private static Camera.Parameters parameters = null;
     private static Camera cameraInst = null;
-
-    private static RtspServer mRtspServer = null;
+    private boolean sCameraRunning = false;
 
     static final int FOCUS = 1;
     static final int ZOOM = 2;
@@ -85,10 +93,11 @@ public class CameraActivity extends BaseActivity {
     private static Camera.Size adapterSize = null;
     private static Camera.Size previewSize = null;
 
-    private static boolean mMonitorInProgress = false;
-
     private View rootView;
     private SurfaceView surfaceView;
+	
+	private Thread mCameraThread;
+	private Looper mCameraLooper;
 
 
     private View.OnClickListener mOnClickListener = new View.OnClickListener() {
@@ -99,15 +108,14 @@ public class CameraActivity extends BaseActivity {
                     switchCamera();
                     break;
                 case R.id.camera_record:
-                    mMonitorInProgress = !mMonitorInProgress;
-                    RefreshMonitorText();
+                    sCameraRunning = !sCameraRunning;
 
-                 /*   if(mMonitorInProgress) {
-                        mRtspServer.start();
-                    }
-                    else {
-                        mRtspServer.stop();
-                    }*/
+					if(sCameraRunning)
+						StartRecordVideo();
+					else
+						StopRecordVideo();
+					
+                    RefreshMonitorText();
                     break;
             }
         }
@@ -115,44 +123,32 @@ public class CameraActivity extends BaseActivity {
 
     private void RefreshMonitorText(){
         TextView body = (TextView) rootView.findViewById(R.id.camera_main);
-        body.setText(mMonitorInProgress ? R.string.record_start:R.string.record_stop);
+        body.setText(sCameraRunning ? R.string.record_start : R.string.record_stop);
     }
 
-    private ServiceConnection mRtspServiceConnection = new ServiceConnection() {
+    private void recordHelper() {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    H264Stream h264Inst = new H264Stream();
+                    //h264Inst.start();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            mRtspServer = (RtspServer) ((RtspServer.LocalBinder)service).getService();
-            mRtspServer.addCallbackListener(mRtspCallbackListener);
-            mRtspServer.start();
-			LOGI(TAG, "the RTSP service is started");
-        }
+            };
+        };
+	};
 
-        @Override
-        public void onServiceDisconnected(ComponentName name) {}
+	private void StartRecordVideo(){
+		recordHelper();
+	}
 
-    };
-
-    private RtspServer.CallbackListener mRtspCallbackListener = new RtspServer.CallbackListener() {
-
-        @Override
-        public void onError(RtspServer server, Exception e, int error) {
-            // We alert the user that the port is already used by another app.
-            if (error == RtspServer.ERROR_BIND_FAILED) {
-                LOGE(TAG, "the RTSP port is already used by another app");
-            }
-        }
-
-        @Override
-        public void onMessage(RtspServer server, int message) {
-            if (message==RtspServer.MESSAGE_STREAMING_STARTED) {
-                LOGI(TAG, "the RTSP streaming is started");
-            } else if (message==RtspServer.MESSAGE_STREAMING_STOPPED) {
-                LOGI(TAG, "the RTSP streaming is stopped");
-            }
-        }
-
-    };
+	private void StopRecordVideo(){
+		
+	}
+	
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -166,12 +162,9 @@ public class CameraActivity extends BaseActivity {
 
         mCameraHelper = new CameraHelper(this);
 
-		SessionBuilder.getInstance().setSurfaceView(surfaceView);
-		SessionBuilder.getInstance().setPreviewOrientation(90);
+        SessionBuilder.getInstance().setSurfaceView(surfaceView);
+		SessionBuilder.getInstance().setPreviewOrientation(getRotationDegree());
 
-        this.startService(new Intent(this,RtspServer.class));
-		
-        mMonitorInProgress = false;
         RefreshMonitorText();
 
         rootView.findViewById(R.id.camera_switch).setOnClickListener(mOnClickListener);
@@ -182,34 +175,13 @@ public class CameraActivity extends BaseActivity {
         initView();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        bindService(new Intent(this, RtspServer.class), mRtspServiceConnection, Context.BIND_AUTO_CREATE);
-
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        if (mRtspServer != null){
-            mRtspServer.removeCallbackListener(mRtspCallbackListener);
-            mRtspServer.stop();
-            LOGI(TAG, "the RTSP service is stopped");
-        }
-        unbindService(mRtspServiceConnection);
-    }
-
     private void initView() {
         SurfaceHolder surfaceHolder = surfaceView.getHolder();
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         surfaceHolder.setKeepScreenOn(true);
         surfaceView.setFocusable(true);
         surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
-        //surfaceView.getHolder().addCallback(new SurfaceCallback());
-
+        surfaceView.getHolder().addCallback(new SurfaceCallback());
 
         boolean canSwitch = false;
         try {
@@ -218,6 +190,7 @@ public class CameraActivity extends BaseActivity {
             LOGD(TAG, "mCameraHelper error");
         }
     }
+	
 
     @Override
     protected int getSelfNavDrawerItem() {
@@ -255,15 +228,19 @@ public class CameraActivity extends BaseActivity {
         setUpPreviewSize(parameters);
         //}
         if (adapterSize != null) {
+			LOGI(TAG, "adapterSize: " + adapterSize.width + "x" + adapterSize.height);
             parameters.setPictureSize(adapterSize.width, adapterSize.height);
         }
         if (previewSize != null) {
+			LOGI(TAG, "previewSize: " + previewSize.width + "x" + previewSize.height);
             parameters.setPreviewSize(previewSize.width, previewSize.height);
+
+		//	surfaceView.getHolder().setFixedSize(previewSize.width, previewSize.height);
         }
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);   //focus
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);   //focus
         } else {
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         }
@@ -278,17 +255,14 @@ public class CameraActivity extends BaseActivity {
     }
 
     private void setUpPicSize(Camera.Parameters parameters) {
-
         if (adapterSize != null) {
             return;
         } else {
             adapterSize = findBestPictureResolution();
-            return;
         }
     }
 
     private void setUpPreviewSize(Camera.Parameters parameters) {
-
         if (previewSize != null) {
             return;
         } else {
@@ -376,7 +350,7 @@ public class CameraActivity extends BaseActivity {
             picResolutionSb.append(supportedPicResolution.width).append('x')
                     .append(supportedPicResolution.height).append(" ");
         }
-       LOGD(TAG, "Supported picture resolutions: " + picResolutionSb);
+		LOGD(TAG, "Supported picture resolutions: " + picResolutionSb);
 
         Camera.Size defaultPictureResolution = cameraParameters.getPictureSize();
         LOGD(TAG, "default picture resolution " + defaultPictureResolution.width + "x"
@@ -425,29 +399,29 @@ public class CameraActivity extends BaseActivity {
         return defaultPictureResolution;
     }
 
-    private void setDispaly(Camera.Parameters parameters, Camera camera) {
-        if (Build.VERSION.SDK_INT >= 8) {
-            int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
-            int degrees = 0;
-            switch (rotation) {
-                case Surface.ROTATION_0:
-                    degrees = 90;
-                    break;
-                case Surface.ROTATION_90:
-                    degrees = 0;
-                    break;
-                case Surface.ROTATION_180:
-                    degrees = 90;
-                    break;
-                case Surface.ROTATION_270:
-                    degrees = 180;
-                    break;
-            }
+	private int getRotationDegree(){
+		int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
+		int degrees = 0;
+		switch (rotation) {
+		    case Surface.ROTATION_0:
+		        degrees = 90;
+		        break;
+		    case Surface.ROTATION_90:
+		        degrees = 0;
+		        break;
+		    case Surface.ROTATION_180:
+		        degrees = 90;
+		        break;
+		    case Surface.ROTATION_270:
+		        degrees = 180;
+		        break;
+		}	
+			
+		return degrees;
+	}
 
-            setDisplayOrientation(camera, degrees);
-        } else {
-            parameters.setRotation(90);
-        }
+    private void setDispaly(Camera.Parameters parameters, Camera camera) {
+		setDisplayOrientation(camera, getRotationDegree());
     }
 
     private void setDisplayOrientation(Camera camera, int i) {
@@ -463,6 +437,37 @@ public class CameraActivity extends BaseActivity {
         }
     }
 
+	/**
+	 * Opens the camera in a new Looper thread so that the preview callback is not called from the main thread
+	 * If an exception is thrown in this Looper thread, we bring it back into the main thread.
+	 * @throws RuntimeException Might happen if another app is already using the camera.
+	 */
+	private void openCamera(final SurfaceHolder holder) throws RuntimeException {
+		final Semaphore lock = new Semaphore(0);
+		mCameraThread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Looper.prepare();
+				mCameraLooper = Looper.myLooper();
+				try {
+					cameraInst = Camera.open();
+                    cameraInst.setPreviewDisplay(holder);
+                    initCamera();
+                    cameraInst.startPreview();	
+
+					SessionBuilder.getInstance().setCameraInst(cameraInst);
+				} catch (Throwable e) {
+					e.printStackTrace();
+				} finally {
+					lock.release();
+					Looper.loop();
+				}
+			}
+		});
+		mCameraThread.start();
+		lock.acquireUninterruptibly();
+	}
+
     /*SurfaceCallback*/
     private final class SurfaceCallback implements SurfaceHolder.Callback {
 
@@ -471,27 +476,21 @@ public class CameraActivity extends BaseActivity {
                 if (cameraInst != null) {
                     cameraInst.stopPreview();
                     cameraInst.release();
-                    cameraInst = null;
-
-                    mRtspServer.stop();
-                    mRtspServer = null;
                 }
             } catch (Exception e) {
             }
-
+			finally{
+		        cameraInst = null;
+				mCameraLooper.quit();		
+			}
         }
 
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
             if (null == cameraInst) {
-                try {
-                    cameraInst = Camera.open();
-                    cameraInst.setPreviewDisplay(holder);
-                    initCamera();
-                    cameraInst.startPreview();
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                }
+
+				openCamera(holder);
+				
             }
         }
 
@@ -534,9 +533,15 @@ public class CameraActivity extends BaseActivity {
 
     private void releaseCamera() {
         if (cameraInst != null) {
-            cameraInst.setPreviewCallback(null);
-            cameraInst.release();
-            cameraInst = null;
+			try {
+            	cameraInst.setPreviewCallback(null);
+           		cameraInst.release();
+			} catch (Exception e) {
+            }
+			finally{
+		        cameraInst = null;
+				mCameraLooper.quit();		
+			}
         }
         adapterSize = null;
         previewSize = null;

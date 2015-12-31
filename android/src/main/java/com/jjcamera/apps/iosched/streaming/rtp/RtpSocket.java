@@ -25,8 +25,10 @@ import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.jjcamera.apps.iosched.streaming.rtcp.SenderReport;
 import android.os.SystemClock;
@@ -50,12 +52,10 @@ public class RtpSocket implements Runnable {
 	
 	public static final int RTP_HEADER_LENGTH = 12;
 	public static final int MTU = 1300;
+	public static final int MAX_PACKET_COUNT = 1000;	 // TODO: readjust that when the FIFO is full
 
 	private MulticastSocket mSocket;
-	private DatagramPacket[] mPackets;
-	private byte[][] mBuffers;
-	private long[] mTimestamps;
-
+	private ConcurrentLinkedQueue<PacketBufferClass> mBufferQ;
 	private SenderReport mReport;
 	
 	private Semaphore mBufferRequested, mBufferCommitted;
@@ -66,12 +66,25 @@ public class RtpSocket implements Runnable {
 	private long mClock = 0;
 	private long mOldTimestamp = 0;
 	private int mSsrc, mSeq = 0, mPort = -1;
-	private int mBufferCount, mBufferIn, mBufferOut;
+	private InetAddress mDest;
+	private AtomicInteger mBufferInOut;
 	private int mCount = 0;
 	private byte mTcpHeader[];
 	protected OutputStream mOutputStream = null;
 	
 	private AverageBitrate mAverageBitrate;
+
+	public class PacketBufferClass {
+		public DatagramPacket mPackets;
+		public long mTimestamps;
+		public byte[] mBuffers;
+
+		private PacketBufferClass(){
+			mTimestamps = 0;
+			mBuffers = new byte[MTU];
+			mPackets = new DatagramPacket(mBuffers, 1);
+		}
+    }
 
 	/**
 	 * This RTP socket implements a buffering mechanism relying on a FIFO of buffers and a Thread.
@@ -80,56 +93,62 @@ public class RtpSocket implements Runnable {
 	public RtpSocket() {
 		
 		mCacheSize = 0;
-		mBufferCount = 300; // TODO: readjust that when the FIFO is full 
-		mBuffers = new byte[mBufferCount][];
-		mPackets = new DatagramPacket[mBufferCount];
+		mBufferQ = new ConcurrentLinkedQueue<PacketBufferClass>();
+
 		mReport = new SenderReport();
 		mAverageBitrate = new AverageBitrate();
 		mTransport = TRANSPORT_UDP;
 		mTcpHeader = new byte[] {'$',0,0,0};
+		mBufferInOut = new AtomicInteger();
 		
 		resetFifo();
 
-		for (int i=0; i<mBufferCount; i++) {
-
-			mBuffers[i] = new byte[MTU];
-			mPackets[i] = new DatagramPacket(mBuffers[i], 1);
-
-			/*							     Version(2)  Padding(0)					 					*/
-			/*									 ^		  ^			Extension(0)						*/
-			/*									 |		  |				^								*/
-			/*									 | --------				|								*/
-			/*									 | |---------------------								*/
-			/*									 | ||  -----------------------> Source Identifier(0)	*/
-			/*									 | ||  |												*/
-			mBuffers[i][0] = (byte) Integer.parseInt("10000000",2);
-
-			/* Payload Type */
-			mBuffers[i][1] = (byte) 96;
-
-			/* Byte 2,3        ->  Sequence Number                   */
-			/* Byte 4,5,6,7    ->  Timestamp                         */
-			/* Byte 8,9,10,11  ->  Sync Source Identifier            */
-
-		}
-
 		try {
-		mSocket = new MulticastSocket();
+			mSocket = new MulticastSocket();
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
 		}
 		
 	}
 
+	private PacketBufferClass createPacket(){
+		PacketBufferClass pPacketBuffer = new PacketBufferClass();
+
+
+		/*							     Version(2)  Padding(0)					 					*/
+		/*									 ^		  ^			Extension(0)						*/
+		/*									 |		  |				^								*/
+		/*									 | --------				|								*/
+		/*									 | |---------------------								*/
+		/*									 | ||  -----------------------> Source Identifier(0)	*/
+		/*									 | ||  |												*/
+		pPacketBuffer.mBuffers[0] = (byte) Integer.parseInt("10000000",2);
+
+		/* Payload Type */
+		pPacketBuffer.mBuffers[1] = (byte) 96;
+
+		/* Byte 2,3        ->  Sequence Number                   */
+		/* Byte 4,5,6,7    ->  Timestamp                         */
+		/* Byte 8,9,10,11  ->  Sync Source Identifier            */
+
+		pPacketBuffer.mPackets.setPort(mPort);
+		pPacketBuffer.mPackets.setAddress(mDest);
+		setLong(pPacketBuffer.mBuffers, mSsrc, 8, 12);
+
+		mBufferQ.add(pPacketBuffer);
+		return pPacketBuffer;
+	}
+
 	private void resetFifo() {
 		mCount = 0;
-		mBufferIn = 0;
-		mBufferOut = 0;
-		mTimestamps = new long[mBufferCount];
-		mBufferRequested = new Semaphore(mBufferCount);
+		mBufferInOut.set(0);
+		//mBufferRequested = new Semaphore(MAX_PACKET_COUNT);
 		mBufferCommitted = new Semaphore(0);
 		mReport.reset();
 		mAverageBitrate.reset();
+		mBufferQ.clear();
+
+		Log.d(TAG, "resetFifo");
 	}
 	
 	/** Closes the underlying socket. */
@@ -140,9 +159,7 @@ public class RtpSocket implements Runnable {
 	/** Sets the SSRC of the stream. */
 	public void setSSRC(int ssrc) {
 		this.mSsrc = ssrc;
-		for (int i=0;i<mBufferCount;i++) {
-			setLong(mBuffers[i], ssrc,8,12);
-		}
+
 		mReport.setSSRC(mSsrc);
 	}
 
@@ -170,11 +187,9 @@ public class RtpSocket implements Runnable {
 	public void setDestination(InetAddress dest, int dport, int rtcpPort) {
 		if (dport != 0 && rtcpPort != 0) {
 			mTransport = TRANSPORT_UDP;
-			mPort = dport;
-			for (int i=0;i<mBufferCount;i++) {
-				mPackets[i].setPort(dport);
-				mPackets[i].setAddress(dest);
-			}
+			this.mPort = dport;
+			this.mDest = dest;
+
 			mReport.setDestination(dest, rtcpPort);
 		}
 	}
@@ -210,10 +225,12 @@ public class RtpSocket implements Runnable {
 	 * Call {@link #commitBuffer(int)} to send it over the network. 
 	 * @throws InterruptedException 
 	 **/
-	public byte[] requestBuffer() throws InterruptedException {
-		mBufferRequested.acquire();
-		mBuffers[mBufferIn][1] &= 0x7F;
-		return mBuffers[mBufferIn];
+	public PacketBufferClass requestBuffer() throws InterruptedException {
+		PacketBufferClass pbc = createPacket();
+	
+		//mBufferRequested.acquire();
+		pbc.mBuffers[1] &= 0x7F;
+		return pbc;
 	}
 
 	/** Puts the buffer back into the FIFO without sending the packet. */
@@ -221,29 +238,39 @@ public class RtpSocket implements Runnable {
 
 		if (mThread == null) {
 			mThread = new Thread(this);
+			mThread.setPriority(Thread.MAX_PRIORITY); 
 			mThread.start();
 		}
 		
-		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
-		mBufferCommitted.release();
+		if (mBufferInOut.incrementAndGet() >= MAX_PACKET_COUNT) {
+			Log.d(TAG, "mBufferInOut overflow: " + mBufferInOut.get());
+		}
 
+		mBufferCommitted.release();
 	}	
 	
 	/** Sends the RTP packet over the network. */
-	public void commitBuffer(int length) throws IOException {
-		updateSequence();
-		mPackets[mBufferIn].setLength(length);
+	public void commitBuffer(PacketBufferClass ppb, int length) throws IOException {
+
+		updateSequence(ppb.mBuffers);
+		ppb.mPackets.setLength(length);
 
 		mAverageBitrate.push(length);
 
-		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+		if (mBufferInOut.incrementAndGet() >= MAX_PACKET_COUNT) {
+			Log.d(TAG, "mBufferInOut overflow: " + mBufferInOut.get());
+		}
 		mBufferCommitted.release();
+
+		if (mCount < 10){
+			Log.d(TAG,"commitBuffer-- Timestamp:" + ppb.mTimestamps + ", mBufferInOut: " + mBufferInOut);
+		}		
 
 		if (mThread == null) {
 			mThread = new Thread(this);
+			mThread.setPriority(Thread.MAX_PRIORITY); 
 			mThread.start();
-		}		
-		
+		}
 	}
 
 	/** Returns an approximation of the bitrate of the RTP stream in bits per second. */
@@ -252,79 +279,94 @@ public class RtpSocket implements Runnable {
 	}
 
 	/** Increments the sequence number. */
-	private void updateSequence() {
-		setLong(mBuffers[mBufferIn], ++mSeq, 2, 4);
+	private void updateSequence(byte[] buf) {
+		setLong(buf, ++mSeq, 2, 4);
 	}
 
 	/** 
 	 * Overwrites the timestamp in the packet.
 	 * @param timestamp The new timestamp in ns.
 	 **/
-	public void updateTimestamp(long timestamp) {
-		mTimestamps[mBufferIn] = timestamp;
-		setLong(mBuffers[mBufferIn], (timestamp/100L)*(mClock/1000L)/10000L, 4, 8);
+	public void updateTimestamp(PacketBufferClass ppb, long timestamp) {		
+		if(timestamp < 0)
+			Log.e(TAG, mBufferInOut.get() + " timestamp is below zero: "+timestamp);
+	
+		ppb.mTimestamps= timestamp;
+		setLong(ppb.mBuffers, (timestamp/100L)*(mClock/1000L)/10000L, 4, 8);
 	}
 
 	/** Sets the marker in the RTP packet. */
-	public void markNextPacket() {
-		mBuffers[mBufferIn][1] |= 0x80;
+	public void markNextPacket(byte[] buf) {
+		buf[1] |= 0x80;
 	}
 
 	/** The Thread sends the packets in the FIFO one by one at a constant rate. */
 	@Override
 	public void run() {
-		Statistics stats = new Statistics(50,3000);
+		Statistics stats = new Statistics(50, 3000);
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
+			Log.d(TAG, "rtp send thread is running now...");
 			Thread.sleep(mCacheSize);
 			long delta = 0;
-			while (mBufferCommitted.tryAcquire(4,TimeUnit.SECONDS)) {
+			while (mBufferCommitted.tryAcquire(4, TimeUnit.SECONDS)) {        //if no new data within 4 sec, thread exit
+
+				PacketBufferClass pNewData = mBufferQ.poll();
+				if (pNewData == null) {
+					Log.e(TAG, "newdata is empty, it should not happen");
+					continue;
+				}
+
 				if (mOldTimestamp != 0) {
 					// We use our knowledge of the clock rate of the stream and the difference between two timestamps to
 					// compute the time lapse that the packet represents.
-					if ((mTimestamps[mBufferOut]-mOldTimestamp)>0) {
-						stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
-						long d = stats.average()/1000000;
-						//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
+					delta = pNewData.mTimestamps - mOldTimestamp;
+
+					if (delta > 0) {
+						stats.push(delta);
+						long d = stats.average() / 1000000;
+						//Log.d(TAG,"d: "+d+" delay: "+delta/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-						if (mCacheSize>0) Thread.sleep(d);
-					} else if ((mTimestamps[mBufferOut]-mOldTimestamp)<0) {
-						Log.e(TAG, "TS: "+mTimestamps[mBufferOut]+" OLD: "+mOldTimestamp);
-					}
-					delta += mTimestamps[mBufferOut]-mOldTimestamp;
-					if (delta>500000000 || delta<0) {
-						//Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
-						delta = 0;
+						if (mCacheSize > 0) Thread.sleep(d);
+					} else if (delta < 0) {
+						Log.e(TAG, "TS: " + pNewData.mTimestamps + " OLD: " + mOldTimestamp);
 					}
 				}
-				mReport.update(mPackets[mBufferOut].getLength(), (mTimestamps[mBufferOut]/100L)*(mClock/1000L)/10000L);
-				mOldTimestamp = mTimestamps[mBufferOut];
-				if (mCount++>30) {
+
+				mReport.update(pNewData.mPackets.getLength(), (pNewData.mTimestamps / 100L) * (mClock / 1000L) / 10000L);
+				if (pNewData.mTimestamps > 0 && mCount++ >= 0) {
+					mOldTimestamp = pNewData.mTimestamps;
+
 					if (mTransport == TRANSPORT_UDP) {
-						mSocket.send(mPackets[mBufferOut]);
+						mSocket.send(pNewData.mPackets);
 					} else {
-						sendTCP();
+						sendTCP(pNewData);
+					}
+
+					if (mCount < 10) {
+						Log.d(TAG, "send-- Timestamp:" + pNewData.mTimestamps + ", mBufferInOut: " + mBufferInOut.get());
 					}
 				}
-				if (++mBufferOut>=mBufferCount) mBufferOut = 0;
-				mBufferRequested.release();
+				mBufferInOut.decrementAndGet();
+				//mBufferRequested.release();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		Log.d(TAG, "rtp send thread is stopping now...");
 		mThread = null;
 		resetFifo();
 	}
 
-	private void sendTCP() {
+	private void sendTCP(PacketBufferClass sData) {
 		synchronized (mOutputStream) {
-			int len = mPackets[mBufferOut].getLength();
+			int len = sData.mPackets.getLength();
 			Log.d(TAG,"sent "+len);
 			mTcpHeader[2] = (byte) (len>>8);
 			mTcpHeader[3] = (byte) (len&0xFF);
 			try {
 				mOutputStream.write(mTcpHeader);
-				mOutputStream.write(mBuffers[mBufferOut], 0, len);
+				mOutputStream.write(sData.mBuffers, 0, len);
 			} catch (Exception e) {}
 		}
 	}

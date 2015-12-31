@@ -46,6 +46,7 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -68,6 +69,7 @@ public abstract class VideoStream extends MediaStream {
 	protected int mVideoEncoder, mCameraId = 0;
 	protected int mRequestedOrientation = 0, mOrientation = 0;
 	protected Camera mCamera;
+	protected Camera mUsedCamera;		// the camera which was open
 	protected Thread mCameraThread;
 	protected Looper mCameraLooper;
 
@@ -153,7 +155,13 @@ public abstract class VideoStream extends MediaStream {
 	 */
 	public synchronized void setSurfaceView(SurfaceView view) {
 		mSurfaceView = view;
-		if (mSurfaceHolderCallback != null && mSurfaceView != null && mSurfaceView.getHolder() != null) {
+		
+		if(mUsedCamera != null && mSurfaceView != null && mSurfaceView.getHolder() != null){
+			mSurfaceReady = true;
+			return;
+		}
+	
+		if (mSurfaceHolderCallback != null && mSurfaceView != null && mSurfaceView.getHolder() != null) {			
 			mSurfaceView.getHolder().removeCallback(mSurfaceHolderCallback);
 		}
 		if (mSurfaceView != null && mSurfaceView.getHolder() != null) {
@@ -320,7 +328,7 @@ public abstract class VideoStream extends MediaStream {
 	 * Stops the preview.
 	 */
 	public synchronized void stopPreview() {
-		mCameraOpenedManually = false;
+	//	mCameraOpenedManually = false;
 		stop();
 	}
 
@@ -347,9 +355,11 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
-			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
-			mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);
+			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());	
+			mMediaRecorder.setVideoSize(mRequestedQuality.resX, mRequestedQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
+			//if(mOrientation == 90)
+			//	mMediaRecorder.setOrientationHint(90);				
 
 			// The bandwidth actually consumed is often above what was requested 
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
@@ -369,6 +379,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.start();
 
 		} catch (Exception e) {
+			destroyCamera();
 			throw new ConfNotSupportedException(e.getMessage());
 		}
 
@@ -537,6 +548,15 @@ public abstract class VideoStream extends MediaStream {
 	 */	
 	public abstract String getSessionDescription() throws IllegalStateException;
 
+	/** 
+	 * Sets the current running camera.
+	 * @param camera, The instance of the camera
+	 */
+	public void setUsedCamera(Camera camera) {
+		mUsedCamera = camera;
+	}
+
+
 	/**
 	 * Opens the camera in a new Looper thread so that the preview callback is not called from the main thread
 	 * If an exception is thrown in this Looper thread, we bring it back into the main thread.
@@ -565,6 +585,29 @@ public abstract class VideoStream extends MediaStream {
 		if (exception[0] != null) throw new CameraInUseException(exception[0].getMessage());
 	}
 
+	private void openCameraFake() throws RuntimeException {
+		final Semaphore lock = new Semaphore(0);
+		final RuntimeException[] exception = new RuntimeException[1];
+		mCameraThread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Looper.prepare();
+				mCameraLooper = Looper.myLooper();
+				try {
+					//DO NOTHING
+				} catch (RuntimeException e) {
+					exception[0] = e;
+				} finally {
+					lock.release();
+					Looper.loop();
+				}
+			}
+		});
+		mCameraThread.start();
+		lock.acquireUninterruptibly();
+		if (exception[0] != null) throw new CameraInUseException(exception[0].getMessage());
+	}	
+
 	protected synchronized void createCamera() throws RuntimeException {
 		if (mSurfaceView == null)
 			throw new InvalidSurfaceException("Invalid surface !");
@@ -572,7 +615,14 @@ public abstract class VideoStream extends MediaStream {
 			throw new InvalidSurfaceException("Invalid surface !");
 
 		if (mCamera == null) {
-			openCamera();
+			if(mUsedCamera == null)
+				openCamera();
+			else{
+				mCamera = mUsedCamera;
+				mPreviewStarted = true;
+				mCameraOpenedManually = true;
+				openCameraFake();
+			}
 			mUpdated = false;
 			mUnlocked = false;
 			mCamera.setErrorCallback(new Camera.ErrorCallback() {
@@ -627,9 +677,15 @@ public abstract class VideoStream extends MediaStream {
 		if (mCamera != null) {
 			if (mStreaming) super.stop();
 			lockCamera();
-			mCamera.stopPreview();
+
 			try {
-				mCamera.release();
+				if(mPreviewStarted && mCameraOpenedManually){
+					//do nothing, because we open camera and preview at outside activity.
+				}
+				else{
+					mCamera.stopPreview();
+					mCamera.release();
+				}
 			} catch (Exception e) {
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
 			}
@@ -660,11 +716,13 @@ public abstract class VideoStream extends MediaStream {
 		parameters.setPreviewFormat(mCameraImageFormat);
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
 		parameters.setPreviewFpsRange(max[0], max[1]);
+        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);   //focus
 
 		try {
 			mCamera.setParameters(parameters);
 			mCamera.setDisplayOrientation(mOrientation);
 			mCamera.startPreview();
+			//mCamera.cancelAutoFocus();
 			mPreviewStarted = true;
 			mUpdated = true;
 		} catch (RuntimeException e) {

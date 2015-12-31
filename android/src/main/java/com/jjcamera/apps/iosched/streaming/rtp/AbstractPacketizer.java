@@ -42,7 +42,7 @@ abstract public class AbstractPacketizer {
 
 	protected RtpSocket socket = null;
 	protected InputStream is = null;
-	protected byte[] buffer;
+	protected RtpSocket.PacketBufferClass buffer;
 	
 	protected long ts = 0;
 
@@ -90,8 +90,8 @@ abstract public class AbstractPacketizer {
 	public abstract void stop();
 
 	/** Updates data for RTCP SR and sends the packet. */
-	protected void send(int length) throws IOException {
-		socket.commitBuffer(length);
+	protected void send(RtpSocket.PacketBufferClass ppb, int length) throws IOException {
+		socket.commitBuffer(ppb, length);
 	}
 
 	/** For debugging purposes. */

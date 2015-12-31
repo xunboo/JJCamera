@@ -173,6 +173,7 @@ public class H264Stream extends VideoStream {
 		
 		boolean cameraOpen = mCamera!=null;
 		createCamera();
+		cameraOpen = mCamera!=null;
 
 		// Stops the preview if needed
 		if (mPreviewStarted) {
@@ -204,7 +205,7 @@ public class H264Stream extends VideoStream {
 			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
 			mMediaRecorder.setOutputFile(TESTFILE);
-			mMediaRecorder.setMaxDuration(3000);
+			mMediaRecorder.setMaxDuration(8000);
 			
 			// We wait a little and stop recording
 			mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
@@ -227,11 +228,11 @@ public class H264Stream extends VideoStream {
 			mMediaRecorder.prepare();
 			mMediaRecorder.start();
 
-			if (mLock.tryAcquire(6,TimeUnit.SECONDS)) {
+			if (mLock.tryAcquire(10,TimeUnit.SECONDS)) {
 				Log.d(TAG,"MediaRecorder callback was called :)");
 				Thread.sleep(400);
 			} else {
-				Log.d(TAG,"MediaRecorder callback was not called after 6 seconds... :(");
+				Log.d(TAG,"MediaRecorder callback was not called after 10 seconds... :(");
 			}
 		} catch (IOException e) {
 			throw new ConfNotSupportedException(e.getMessage());
