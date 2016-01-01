@@ -77,7 +77,7 @@ public abstract class MediaStream implements Stream {
 	 */
 	protected final static byte sPipeApi;
 	
-	protected boolean mStreaming = false, mConfigured = false;
+	protected boolean mStreaming = false, mConfigured = false, mStarted = false;
 	protected int mRtpPort = 0, mRtcpPort = 0; 
 	protected byte mChannelIdentifier = 0;
 	protected OutputStream mOutputStream = null;
@@ -247,6 +247,10 @@ public abstract class MediaStream implements Stream {
 		return mStreaming;
 	}
 
+	public boolean isStarted() {
+		return mStarted;
+	}
+
 	/**
 	 * Configures the stream with the settings supplied with 
 	 * {@link VideoStream#setVideoQuality(com.jjcamera.apps.iosched.streaming.video.VideoQuality)}
@@ -273,7 +277,9 @@ public abstract class MediaStream implements Stream {
 			throw new IllegalStateException("No destination ports set for the stream !");
 
 		mPacketizer.setTimeToLive(mTTL);
-		
+
+		mStarted = true;
+
 		if (mMode != MODE_MEDIARECORDER_API) {
 			encodeWithMediaCodec();
 		} else {
@@ -303,6 +309,7 @@ public abstract class MediaStream implements Stream {
 				e.printStackTrace();
 			}	
 			mStreaming = false;
+			mStarted = false;
 		}
 	}
  

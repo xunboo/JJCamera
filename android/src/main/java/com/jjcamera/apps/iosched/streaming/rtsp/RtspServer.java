@@ -400,8 +400,12 @@ public class RtspServer extends Service {
 					break;
 				} catch (Exception e) {
 					// We don't understand the request :/
+				/*	e.printStackTrace();
+					
 					response = new Response();
-					response.status = Response.STATUS_BAD_REQUEST;
+					response.status = Response.STATUS_BAD_REQUEST;*/
+
+					continue;
 				}
 
 				// Do something accordingly like starting the streams, sending a session description
@@ -506,11 +510,17 @@ public class RtspServer extends Service {
                     }
 
                     trackId = Integer.parseInt(m.group(1));
+					Log.d(TAG, "getTrackId: " + trackId);
 
                     if (!mSession.trackExists(trackId)) {
                         response.status = Response.STATUS_NOT_FOUND;
                         return response;
                     }
+
+	                if (mSession.trackSyncing(trackId)) {
+                        response.status = Response.STATUS_BAD_REQUEST;
+                        return response;
+                    }				
 
                     p = Pattern.compile("client_port=(\\d+)-(\\d+)", Pattern.CASE_INSENSITIVE);
                     m = p.matcher(request.headers.get("transport"));
@@ -638,6 +648,7 @@ public class RtspServer extends Service {
 
 			// Parsing request method & uri
 			if ((line = input.readLine())==null) throw new SocketException("Client disconnected");
+			Log.d(TAG,line);
 			matcher = regexMethod.matcher(line);
 			matcher.find();
 			request.method = matcher.group(1);

@@ -379,6 +379,8 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.start();
 
 		} catch (Exception e) {
+			mMediaRecorder = null;
+
 			destroyCamera();
 			throw new ConfNotSupportedException(e.getMessage());
 		}

@@ -742,4 +742,11 @@ public class Session {
 			return mVideoStream;
 	}
 
+	public boolean trackSyncing(int id) {
+		if (id==0) 
+			return mAudioStream!=null && mAudioStream.isStarted();
+		else
+			return mVideoStream!=null && mVideoStream.isStarted();
+	}
+
 }
