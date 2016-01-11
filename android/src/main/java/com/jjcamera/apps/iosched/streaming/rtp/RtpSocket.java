@@ -132,10 +132,9 @@ public class RtpSocket implements Runnable {
 		/* Byte 8,9,10,11  ->  Sync Source Identifier            */
 
 		pPacketBuffer.mPackets.setPort(mPort);
-		pPacketBuffer.mPackets.setAddress(mDest);
+		//pPacketBuffer.mPackets.setAddress(mDest);
 		setLong(pPacketBuffer.mBuffers, mSsrc, 8, 12);
 
-		mBufferQ.add(pPacketBuffer);
 		return pPacketBuffer;
 	}
 
@@ -147,8 +146,15 @@ public class RtpSocket implements Runnable {
 		mReport.reset();
 		mAverageBitrate.reset();
 		mBufferQ.clear();
+		mOldTimestamp = 0;
+		mSeq = 0;
 
 		Log.d(TAG, "resetFifo");
+	}
+
+	public synchronized void resetDest(){
+		this.mDest = null;
+	//	this.mPort = -1;
 	}
 	
 	/** Closes the underlying socket. */
@@ -184,7 +190,7 @@ public class RtpSocket implements Runnable {
 	}
 
 	/** Sets the destination address and to which the packets will be sent. */
-	public void setDestination(InetAddress dest, int dport, int rtcpPort) {
+	public synchronized void setDestination(InetAddress dest, int dport, int rtcpPort) {
 		if (dport != 0 && rtcpPort != 0) {
 			mTransport = TRANSPORT_UDP;
 			this.mPort = dport;
@@ -192,6 +198,11 @@ public class RtpSocket implements Runnable {
 
 			mReport.setDestination(dest, rtcpPort);
 		}
+	}
+
+	/** Returns if destination null set with {@link #setDestination(String)}. */
+	public synchronized InetAddress getDestination() {
+		return this.mDest;
 	}
 	
 	/**
@@ -204,7 +215,7 @@ public class RtpSocket implements Runnable {
 			mTransport = TRANSPORT_TCP;
 			mOutputStream = outputStream;
 			mTcpHeader[1] = channelIdentifier;
-			mReport.setOutputStream(outputStream, (byte) (channelIdentifier+1));
+			mReport.setOutputStream(outputStream, (byte) (channelIdentifier + 1));
 		}
 	}
 
@@ -218,6 +229,14 @@ public class RtpSocket implements Runnable {
 			mReport.getLocalPort()
 		};
 		
+	}
+
+	public void createSendThread()  throws IOException {
+		if (mThread == null) {
+			mThread = new Thread(this);
+			mThread.setPriority(Thread.MAX_PRIORITY); 
+			mThread.start();
+		}		
 	}
 	
 	/** 
@@ -233,14 +252,14 @@ public class RtpSocket implements Runnable {
 		return pbc;
 	}
 
+	/*public void removeBuffer() throws IOException {
+		mBufferQ.poll();
+	}*/
+
 	/** Puts the buffer back into the FIFO without sending the packet. */
 	public void commitBuffer() throws IOException {
 
-		if (mThread == null) {
-			mThread = new Thread(this);
-			mThread.setPriority(Thread.MAX_PRIORITY); 
-			mThread.start();
-		}
+		createSendThread();
 		
 		if (mBufferInOut.incrementAndGet() >= MAX_PACKET_COUNT) {
 			Log.d(TAG, "mBufferInOut overflow: " + mBufferInOut.get());
@@ -250,27 +269,29 @@ public class RtpSocket implements Runnable {
 	}	
 	
 	/** Sends the RTP packet over the network. */
-	public void commitBuffer(PacketBufferClass ppb, int length) throws IOException {
+	public void commitBuffer(PacketBufferClass ppb, InetAddress dest, int length) throws IOException {
+
+		if (dest==null)
+			throw new IOException("No destination ip address set for the stream !");
 
 		updateSequence(ppb.mBuffers);
 		ppb.mPackets.setLength(length);
+		ppb.mPackets.setAddress(dest);
 
 		mAverageBitrate.push(length);
 
 		if (mBufferInOut.incrementAndGet() >= MAX_PACKET_COUNT) {
 			Log.d(TAG, "mBufferInOut overflow: " + mBufferInOut.get());
 		}
+	
+		mBufferQ.add(ppb);
 		mBufferCommitted.release();
 
 		if (mCount < 10){
-			Log.d(TAG,"commitBuffer-- Timestamp:" + ppb.mTimestamps + ", mBufferInOut: " + mBufferInOut);
+			Log.d(TAG, "commitBuffer-- Timestamp:" + ppb.mTimestamps + ", mBufferInOut: " + mBufferInOut);
 		}		
 
-		if (mThread == null) {
-			mThread = new Thread(this);
-			mThread.setPriority(Thread.MAX_PRIORITY); 
-			mThread.start();
-		}
+		createSendThread();
 	}
 
 	/** Returns an approximation of the bitrate of the RTP stream in bits per second. */
@@ -325,26 +346,32 @@ public class RtpSocket implements Runnable {
 					if (delta > 0) {
 						stats.push(delta);
 						long d = stats.average() / 1000000;
-						//Log.d(TAG,"d: "+d+" delay: "+delta/1000000);
+						if( d > mCacheSize)
+							Log.d(TAG,"d: "+d+" delay: "+delta/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-						if (mCacheSize > 0) Thread.sleep(d);
+						if (mCacheSize > 0 && d < mCacheSize) Thread.sleep(d);
 					} else if (delta < 0) {
 						Log.e(TAG, "TS: " + pNewData.mTimestamps + " OLD: " + mOldTimestamp);
 					}
 				}
 
 				mReport.update(pNewData.mPackets.getLength(), (pNewData.mTimestamps / 100L) * (mClock / 1000L) / 10000L);
-				if (pNewData.mTimestamps > 0 && mCount++ >= 0) {
-					mOldTimestamp = pNewData.mTimestamps;
-
+				mOldTimestamp = pNewData.mTimestamps;
+				
+				if (mCount++ >= 0) {
 					if (mTransport == TRANSPORT_UDP) {
-						mSocket.send(pNewData.mPackets);
+						try {
+							mSocket.send(pNewData.mPackets);
+						}
+						catch(Exception e) {
+							Log.e(TAG, e.getMessage());
+						}
 					} else {
 						sendTCP(pNewData);
 					}
 
 					if (mCount < 10) {
-						Log.d(TAG, "send-- Timestamp:" + pNewData.mTimestamps + ", mBufferInOut: " + mBufferInOut.get());
+						Log.d(TAG, "send " + pNewData.mPackets.getAddress().toString() + " -- Timestamp:" + pNewData.mTimestamps + ", mBufferInOut: " + mBufferInOut.get());
 					}
 				}
 				mBufferInOut.decrementAndGet();

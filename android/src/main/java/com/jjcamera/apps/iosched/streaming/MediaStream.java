@@ -115,6 +115,9 @@ public abstract class MediaStream implements Stream {
 		} else {
 			sPipeApi = PIPE_API_LS;
 		}
+
+		//suggest recorder mode for jjcamera
+		sSuggestedMode = MODE_MEDIARECORDER_API;
 	}
 
 	public MediaStream() {
@@ -126,8 +129,12 @@ public abstract class MediaStream implements Stream {
 	 * Sets the destination IP address of the stream.
 	 * @param dest The destination address of the stream 
 	 */	
-	public void setDestinationAddress(InetAddress dest) {
+	public void setDestinationAddress(InetAddress dest) {	
 		mDestination = dest;
+
+		if (mPacketizer != null) {
+			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+		}
 	}
 
 	/** 
@@ -269,9 +276,10 @@ public abstract class MediaStream implements Stream {
 	
 	/** Starts the stream. */
 	public synchronized void start() throws IllegalStateException, IOException {
-		
-		if (mDestination==null)
-			throw new IllegalStateException("No destination ip address set for the stream !");
+
+		//no need dest for local streaming
+		//if (mDestination==null)
+		//	throw new IllegalStateException("No destination ip address set for the stream !");
 
 		if (mRtpPort<=0 || mRtcpPort<=0)
 			throw new IllegalStateException("No destination ports set for the stream !");
@@ -310,6 +318,18 @@ public abstract class MediaStream implements Stream {
 			}	
 			mStreaming = false;
 			mStarted = false;
+		}
+	}
+
+	/** Resets the stream. */
+	@SuppressLint("NewApi") 
+	public synchronized  void reset() {
+		if (mStreaming) {
+			try {
+				mPacketizer.reset();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}			
 		}
 	}
  

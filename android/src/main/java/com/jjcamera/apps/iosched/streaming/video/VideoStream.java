@@ -26,16 +26,22 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.io.File;
+import java.io.FileOutputStream;
+
 
 import com.jjcamera.apps.iosched.streaming.MediaStream;
 import com.jjcamera.apps.iosched.streaming.Stream;
 import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
 import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
 import com.jjcamera.apps.iosched.streaming.exceptions.InvalidSurfaceException;
+import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableException;
 import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
 import com.jjcamera.apps.iosched.streaming.hw.EncoderDebugger;
 import com.jjcamera.apps.iosched.streaming.hw.NV21Convertor;
 import com.jjcamera.apps.iosched.streaming.rtp.MediaCodecInputStream;
+import com.jjcamera.apps.iosched.util.SDCardUtils;
+
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -47,6 +53,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -69,7 +76,7 @@ public abstract class VideoStream extends MediaStream {
 	protected int mVideoEncoder, mCameraId = 0;
 	protected int mRequestedOrientation = 0, mOrientation = 0;
 	protected Camera mCamera;
-	protected Camera mUsedCamera;		// the camera which was open
+	protected Camera mCameraInuse;		// the camera which was open
 	protected Thread mCameraThread;
 	protected Looper mCameraLooper;
 
@@ -156,7 +163,7 @@ public abstract class VideoStream extends MediaStream {
 	public synchronized void setSurfaceView(SurfaceView view) {
 		mSurfaceView = view;
 		
-		if(mUsedCamera != null && mSurfaceView != null && mSurfaceView.getHolder() != null){
+		if(mCameraInuse != null && mSurfaceView != null && mSurfaceView.getHolder() != null){
 			mSurfaceReady = true;
 			return;
 		}
@@ -408,7 +415,21 @@ public abstract class VideoStream extends MediaStream {
 			throw e;
 		}
 
+		final String TESTFILE = SDCardUtils.getExternalSdCardPath()+"/recorder-test.tsdump";
+
+		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
+
+		FileOutputStream fop = null;
+		try {
+			File file = new File(TESTFILE);
+			file.createNewFile();
+			fop = new FileOutputStream(file);
+		} catch (IOException e) {
+			throw new StorageUnavailableException(e.getMessage());
+		}
+
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
+		mPacketizer.setOutputStream(fop);
 		mPacketizer.setInputStream(is);
 		mPacketizer.start();
 
@@ -554,8 +575,8 @@ public abstract class VideoStream extends MediaStream {
 	 * Sets the current running camera.
 	 * @param camera, The instance of the camera
 	 */
-	public void setUsedCamera(Camera camera) {
-		mUsedCamera = camera;
+	public void setCameraInuse(Camera camera) {
+		mCameraInuse = camera;
 	}
 
 
@@ -617,10 +638,10 @@ public abstract class VideoStream extends MediaStream {
 			throw new InvalidSurfaceException("Invalid surface !");
 
 		if (mCamera == null) {
-			if(mUsedCamera == null)
+			if(mCameraInuse == null)
 				openCamera();
 			else{
-				mCamera = mUsedCamera;
+				mCamera = mCameraInuse;
 				mPreviewStarted = true;
 				mCameraOpenedManually = true;
 				openCameraFake();

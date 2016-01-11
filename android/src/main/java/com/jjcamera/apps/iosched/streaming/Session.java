@@ -113,6 +113,9 @@ public class Session {
 	private Handler mMainHandler;
 
 	private Handler mHandler;
+		
+	private final boolean mKeepStreaming = true;  //true means the stream should continue packetizing even the client disconnect
+	
 
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
@@ -360,6 +363,11 @@ public class Session {
 			return false;
 	}
 
+	/** Indicates keep streaming flag. */
+	public boolean isKeepStreaming() {
+			return mKeepStreaming;
+	}
+
 	/** 
 	 * Configures all streams of the session.
 	 **/
@@ -390,9 +398,15 @@ public class Session {
 
 		for (int id=0;id<2;id++) {
 			Stream stream = id==0 ? mAudioStream : mVideoStream;
-			if (stream!=null && !stream.isStreaming()) {
+			if (stream!=null) {
 				try {
-					stream.configure();
+					if(!stream.isStreaming()){
+						stream.configure();
+					}
+					else if(mKeepStreaming && mDestination != null){
+						InetAddress destination =  InetAddress.getByName(mDestination);
+						stream.setDestinationAddress(destination);
+					}
 				} catch (CameraInUseException e) {
 					postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
 					throw e;
@@ -447,9 +461,11 @@ public class Session {
 		Stream stream = id==0 ? mAudioStream : mVideoStream;
 		if (stream!=null && !stream.isStreaming()) {
 			try {
-				InetAddress destination =  InetAddress.getByName(mDestination);
 				stream.setTimeToLive(mTimeToLive);
-				stream.setDestinationAddress(destination);
+				if(mDestination != null) {
+					InetAddress destination = InetAddress.getByName(mDestination);
+					stream.setDestinationAddress(destination);
+				}
 				stream.start();
 				if (getTrack(1-id) == null || getTrack(1-id).isStreaming()) {
 					postSessionStarted();
@@ -647,6 +663,15 @@ public class Session {
 		removeAudioTrack();
 		removeVideoTrack();
 		mHandler.getLooper().quit();
+	}
+
+	public void reset(){
+		for (int id=0;id<2;id++) {
+			Stream stream = id==0 ? mAudioStream : mVideoStream;
+			if (stream!=null && stream.isStreaming()){
+				stream.reset();
+			}
+		}
 	}
 
 	private void postPreviewStarted() {

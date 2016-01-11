@@ -47,6 +47,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	byte[] header = new byte[5];	
 	private int count = 0;
 	private int streamType = 1;
+	private final int keyFrameSync = 1;
+	
+	private final static int MAX_NALU_LENGTH = 10000000;	//10MB for 720p
 
 	public enum NalUnitType {
 	    NAL_UNKNOWN (0),
@@ -89,6 +92,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		if (t != null) {
 			try {
 				is.close();
+
+				os.flush();
+				os.close();
 			} catch (IOException e) {}
 			t.interrupt();
 			try {
@@ -125,6 +131,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	}	
 
 	public void run() {
+		int run = 0;
 		long duration = 0;
 		Log.d(TAG,"H264 packetizer started !");
 		stats.reset();
@@ -135,25 +142,29 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			socket.setCacheSize(0);
 		} else {
 			streamType = 0;	
-			socket.setCacheSize(400);
+			socket.setCacheSize(400);	
 		}
 
 		try {
+			//socket.createSendThread();
+			
 			while (!Thread.interrupted()) {
 
 				oldtime = System.nanoTime();
+				
 				// We read a NAL units from the input stream and we send them
 				send();
+				
 				// We measure how long it took to receive NAL units from the phone
 				duration = System.nanoTime() - oldtime;
-
 				stats.push(duration);
 				// Computes the average duration of a NAL unit
 				delay = stats.average();
-				//Log.d(TAG,"duration: "+duration/1000000+" delay: "+delay/1000000);
-
+				if(run++ < 10)
+					Log.d(TAG,"duration: "+duration/1000000+" delay: "+delay/1000000 + " ts: " + ts);
 			}
 		} catch (IOException e) {
+			Log.e(TAG,"H264 packetizer IOException ! " + e.getMessage());		
 		} catch (InterruptedException e) {}
 
 		Log.d(TAG,"H264 packetizer stopped !");
@@ -171,9 +182,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		if (streamType == 0) {
 			// NAL units are preceeded by their length, we parse the length
 			fill(header,0,5);
-			ts += delay;
+			ts += delay;			
 			naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
-			if (naluLength>200000 || naluLength<0) resync();
+			if (naluLength>MAX_NALU_LENGTH || naluLength<0) resync();
 		} else if (streamType == 1) {
 			// NAL units are preceeded with 0x00000001
 			fill(header,0,5);
@@ -212,12 +223,13 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 		// We send two packets containing NALU type 7 (SPS) and 8 (PPS)
 		// Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.
-		if (type == 5 && sps != null && pps != null) {
+		if (type == 5 && sps != null && pps != null) {	
 			buffer = socket.requestBuffer();
 			socket.markNextPacket(buffer.mBuffers);
 			socket.updateTimestamp(buffer, ts);
 			System.arraycopy(stapa, 0, buffer.mBuffers, rtphl, stapa.length);
-			super.send(buffer, rtphl+stapa.length);
+			streamWrite(buffer.mBuffers, rtphl, stapa.length);
+			super.send(buffer, rtphl+stapa.length, keyFrameSync);
 		}
 
 		//Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
@@ -229,12 +241,12 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			len = fill(buffer.mBuffers, rtphl+1,  naluLength-1);
 			socket.updateTimestamp(buffer, ts);
 			socket.markNextPacket(buffer.mBuffers);
-			super.send(buffer, naluLength+rtphl);
+			streamWrite(buffer.mBuffers, rtphl, naluLength);
+			super.send(buffer, naluLength+rtphl, 0);		
 			//Log.d(TAG,"----- Single NAL unit - len:"+len+" delay: "+delay);
 		}
 		// Large NAL unit => Split nal unit 
 		else {
-
 			// Set FU-A header
 			header[1] = (byte) (header[4] & 0x1F);  // FU header type
 			header[1] += 0x80; // Start bit
@@ -254,7 +266,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 					buffer.mBuffers[rtphl+1] += 0x40;
 					socket.markNextPacket(buffer.mBuffers);
 				}
-				super.send(buffer, len+rtphl+2);
+				streamWrite(buffer.mBuffers, rtphl, len + 2);
+				super.send(buffer, len+rtphl+2, 0);			
 				// Switch start bit
 				header[1] = (byte) (header[1] & 0x7F); 
 				//Log.d(TAG,"----- FU-A unit, sum:"+sum);
@@ -267,7 +280,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		while (sum<length) {
 			len = is.read(buffer, offset+sum, length-sum);
 			if (len<0) {
-				throw new IOException("End of stream");
+				throw new IOException("End of stream for fill");
 			}
 			else sum+=len;
 		}
@@ -276,6 +289,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	private void resync() throws IOException {
 		int type;
+		int len;
 
 		Log.e(TAG,"Packetizer out of sync ! Let's try to fix that...(NAL length: "+naluLength+")");
 
@@ -286,12 +300,15 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			header[2] = header[3];
 			header[3] = header[4];
 			header[4] = (byte) is.read();
-
+			if (header[4]<0) {
+				throw new IOException("End of stream for resync");
+			}
+			
 			type = header[4]&0x1F;
 
 			if (type == 5 || type == 1) {
 				naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
-				if (naluLength>0 && naluLength<100000) {
+				if (naluLength>0 && naluLength<=MAX_NALU_LENGTH) {
 					oldtime = System.nanoTime();
 					Log.e(TAG,"A NAL unit may have been found in the bit stream !");
 					break;

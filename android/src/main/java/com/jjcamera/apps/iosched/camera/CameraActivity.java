@@ -19,6 +19,7 @@ package com.jjcamera.apps.iosched.camera;
 import com.jjcamera.apps.iosched.AppApplication;
 import com.jjcamera.apps.iosched.R;
 import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
+import com.jjcamera.apps.iosched.streaming.rtsp.UriParser;
 import com.jjcamera.apps.iosched.ui.BaseActivity;
 import com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout;
 import com.jjcamera.apps.iosched.util.UIUtils;
@@ -82,6 +83,8 @@ public class CameraActivity extends BaseActivity {
     private static Camera cameraInst = null;
     private boolean sCameraRunning = false;
 
+	private static H264Stream mh264Inst;
+
     static final int FOCUS = 1;
     static final int ZOOM = 2;
     private int mode;
@@ -98,7 +101,6 @@ public class CameraActivity extends BaseActivity {
 	
 	private Thread mCameraThread;
 	private Looper mCameraLooper;
-
 
     private View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
@@ -131,14 +133,25 @@ public class CameraActivity extends BaseActivity {
             @Override
             public void run() {
                 try {
-                    H264Stream h264Inst = new H264Stream();
-                    //h264Inst.start();
+                /*    mh264Inst = new H264Stream();
+					mh264Inst.enableDebug();
+					mh264Inst.setSurfaceView(surfaceView);
+					mh264Inst.setCameraInuse(cameraInst);					
+                    mh264Inst.start();*/
+
+					Session session = UriParser.easyparse();
+				 	session.syncConfigure();
+					if(!session.trackSyncing(1)){	//video
+						session.syncStart(1);
+					//if(!session.trackSyncing(0)){	//audio
+					//	session.syncStart(0);
+            		}				
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
             };
-        };
+        }.start();
 	};
 
 	private void StartRecordVideo(){
@@ -146,7 +159,13 @@ public class CameraActivity extends BaseActivity {
 	}
 
 	private void StopRecordVideo(){
-		
+		//mh264Inst.stop();
+
+		Session session = UriParser.getSession();
+		session.syncStop();
+		session.release();
+
+		UriParser.clearSession();
 	}
 	
 
@@ -161,6 +180,8 @@ public class CameraActivity extends BaseActivity {
         findViewById(R.id.masking).setVisibility(View.GONE);
 
         mCameraHelper = new CameraHelper(this);
+
+		UriParser.clearSession();
 
         SessionBuilder.getInstance().setSurfaceView(surfaceView);
 		SessionBuilder.getInstance().setPreviewOrientation(getRotationDegree());
@@ -214,6 +235,8 @@ public class CameraActivity extends BaseActivity {
             drawShadowFrameLayout.setShadowTopOffset(actionBarSize);
         }
         setContentTopClearance(actionBarSize);
+
+		//StartRecordVideo();
     }
 
     private void openUrl(String url) {
@@ -496,7 +519,7 @@ public class CameraActivity extends BaseActivity {
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            autoFocus();
+            //autoFocus();
         }
     }
 

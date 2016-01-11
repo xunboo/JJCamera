@@ -378,7 +378,7 @@ public class RtspServer extends Service {
 			mInput = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			mOutput = client.getOutputStream();
 			mClient = client;
-			mSession = new Session();
+			//mSession = new Session();
 		}
 
 		public void run() {
@@ -435,11 +435,20 @@ public class RtspServer extends Service {
 
 			// Streaming stops when client disconnects
 			boolean streaming = isStreaming();
-			mSession.syncStop();
-			if (streaming && !isStreaming()) {
-				postMessage(MESSAGE_STREAMING_STOPPED);
+			if(mSession.isKeepStreaming()) {
+				if (streaming) {
+					postMessage(MESSAGE_STREAMING_STOPPED);
+					mSession.reset();
+				}			
 			}
-			mSession.release();
+			else if(mSession != null){
+				mSession.syncStop();
+				if (streaming && !isStreaming()) {
+					postMessage(MESSAGE_STREAMING_STOPPED);
+				}
+				mSession.release();
+			}
+
 
 			try {
 				mClient.close();
@@ -515,12 +524,7 @@ public class RtspServer extends Service {
                     if (!mSession.trackExists(trackId)) {
                         response.status = Response.STATUS_NOT_FOUND;
                         return response;
-                    }
-
-	                if (mSession.trackSyncing(trackId)) {
-                        response.status = Response.STATUS_BAD_REQUEST;
-                        return response;
-                    }				
+                    }			
 
                     p = Pattern.compile("client_port=(\\d+)-(\\d+)", Pattern.CASE_INSENSITIVE);
                     m = p.matcher(request.headers.get("transport"));
@@ -540,7 +544,7 @@ public class RtspServer extends Service {
 
                     mSession.getTrack(trackId).setDestinationPorts(p1, p2);
 
-                    boolean streaming = isStreaming();
+                    boolean streaming = mSession.isKeepStreaming()? false: isStreaming();
                     mSession.syncStart(trackId);
                     if (!streaming && isStreaming()) {
                         postMessage(MESSAGE_STREAMING_STARTED);

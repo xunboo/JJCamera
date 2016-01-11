@@ -59,13 +59,17 @@ public class UriParser {
 	public static VideoQuality videoQuality = new VideoQuality(1280,720,20,5000000);
 
 	/** By default AMR is the audio encoder. */
-	public static int audioEncoder = SessionBuilder.AUDIO_AAC;
+	public static int audioEncoder = SessionBuilder.AUDIO_AMRNB;
 
 	/** By default H.264 is the video encoder. */
 	public static int videoEncoder = SessionBuilder.VIDEO_H264;
 
+	public static Session mCurrentSession = null;
+
 
 	public static Session easyparse() throws IllegalStateException, IOException {
+		if(mCurrentSession != null)		return mCurrentSession;
+		
 		byte audioApi = MediaStream.MODE_MEDIARECORDER_API;
 		byte videoApi = MediaStream.MODE_MEDIARECORDER_API;
 		//byte videoApi = MediaStream.MODE_MEDIACODEC_API;	
@@ -79,7 +83,7 @@ public class UriParser {
 		builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
 
 		builder.setVideoQuality(videoQuality).setVideoEncoder(videoEncoder);
-		//builder.setAudioQuality(audioQuality).setAudioEncoder(audioEncoder);
+	//	builder.setAudioQuality(audioQuality).setAudioEncoder(audioEncoder);
 
 		Session session = builder.build();
 		
@@ -91,9 +95,18 @@ public class UriParser {
 			session.getAudioTrack().setStreamingMethod(audioApi);
 		}
 
+		mCurrentSession = session;
+
 		return session;
 	}
 
+	public static Session getSession() {
+		return mCurrentSession;
+	}	
+
+	public static void clearSession() {
+		mCurrentSession = null;
+	}
 
 	
 	public static Session parse(String uri) throws IllegalStateException, IOException {

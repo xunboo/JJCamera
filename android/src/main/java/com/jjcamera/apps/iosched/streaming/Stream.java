@@ -47,6 +47,11 @@ public interface Stream {
 	public void stop();
 
 	/**
+	 * Resets the stream.
+	 */
+	public void reset();
+
+	/**
 	 * Sets the Time To Live of packets sent over the network.
 	 * @param ttl The time to live
 	 * @throws IOException

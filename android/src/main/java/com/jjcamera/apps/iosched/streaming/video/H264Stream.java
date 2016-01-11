@@ -55,6 +55,8 @@ public class H264Stream extends VideoStream {
 	private Semaphore mLock = new Semaphore(0);
 	private MP4Config mConfig;
 
+	private boolean mDebug = false;
+
 	/**
 	 * Constructs the H.264 stream.
 	 * Uses CAMERA_FACING_BACK by default.
@@ -194,18 +196,20 @@ public class H264Stream extends VideoStream {
 		unlockCamera();
 
 		try {
-			
+			//follow audio video order  http://developer.android.com/guide/topics/media/camera.html#capture-video
 			mMediaRecorder = new MediaRecorder();
 			mMediaRecorder.setCamera(mCamera);
-			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+			if(mDebug) mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);			
+			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);			
+    		if(mDebug)	mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
 			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
 			mMediaRecorder.setOutputFile(TESTFILE);
-			mMediaRecorder.setMaxDuration(8000);
+			mMediaRecorder.setMaxDuration(mDebug?8000:3000);
 			
 			// We wait a little and stop recording
 			mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
@@ -218,7 +222,7 @@ public class H264Stream extends VideoStream {
 					} else if (what==MediaRecorder.MEDIA_RECORDER_INFO_UNKNOWN) {
 						Log.d(TAG,"MediaRecorder: INFO_UNKNOWN");
 					} else {
-						Log.d(TAG,"WTF ?");
+						Log.d(TAG,"WTF ? " + what);
 					}
 					mLock.release();
 				}
@@ -228,7 +232,7 @@ public class H264Stream extends VideoStream {
 			mMediaRecorder.prepare();
 			mMediaRecorder.start();
 
-			if (mLock.tryAcquire(10,TimeUnit.SECONDS)) {
+			if (mLock.tryAcquire(mDebug?10:6,TimeUnit.SECONDS)) {
 				Log.d(TAG,"MediaRecorder callback was called :)");
 				Thread.sleep(400);
 			} else {
@@ -263,7 +267,7 @@ public class H264Stream extends VideoStream {
 
 		// Delete dummy video
 		File file = new File(TESTFILE);
-		if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
+		if(!mDebug)  if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
 
 		Log.i(TAG,"H264 Test succeded...");
 
@@ -276,6 +280,10 @@ public class H264Stream extends VideoStream {
 
 		return config;
 
+	}
+
+	public void enableDebug(){
+		mDebug = true;
 	}
 	
 }

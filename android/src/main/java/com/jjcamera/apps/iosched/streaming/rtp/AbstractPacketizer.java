@@ -42,13 +42,15 @@ abstract public class AbstractPacketizer {
 
 	protected RtpSocket socket = null;
 	protected InputStream is = null;
+	protected OutputStream os = null;	
 	protected RtpSocket.PacketBufferClass buffer;
 	
 	protected long ts = 0;
+	protected boolean getkey = false;
 
 	public AbstractPacketizer() {
 		int ssrc = new Random().nextInt();
-		ts = new Random().nextInt();
+		ts = new Random().nextInt(Integer.MAX_VALUE);
 		socket = new RtpSocket();
 		socket.setSSRC(ssrc);
 	}
@@ -67,6 +69,10 @@ abstract public class AbstractPacketizer {
 
 	public void setInputStream(InputStream is) {
 		this.is = is;
+	}
+
+	public void setOutputStream(OutputStream os) {
+		this.os = os;
 	}
 	
 	public void setTimeToLive(int ttl) throws IOException {
@@ -89,9 +95,32 @@ abstract public class AbstractPacketizer {
 	/** Stops the packetizer. */
 	public abstract void stop();
 
+	/** Resets the socket of packetizer. */
+	public void reset(){
+		socket.resetDest();
+		getkey = false;
+	}
+
 	/** Updates data for RTCP SR and sends the packet. */
 	protected void send(RtpSocket.PacketBufferClass ppb, int length) throws IOException {
-		socket.commitBuffer(ppb, length);
+		InetAddress dest = socket.getDestination();
+		
+		if(dest != null){
+			socket.commitBuffer(ppb, dest, length);
+		}
+	}
+	
+	protected void send(RtpSocket.PacketBufferClass ppb, int length, int key) throws IOException {
+		InetAddress dest = socket.getDestination();
+		
+		if(dest != null){		// key is for h264 
+			if(key == 1 && !getkey)	{				
+				getkey = true;
+				//Log.v(TAG, "get first key frame type in the stream.")
+			}
+			if(getkey)
+				socket.commitBuffer(ppb, dest, length);
+		}
 	}
 
 	/** For debugging purposes. */
@@ -99,6 +128,11 @@ abstract public class AbstractPacketizer {
 		String str = "";
 		for (int i=start;i<end;i++) str+=","+Integer.toHexString(buffer[i]&0xFF);
 		return str;
+	}
+
+	protected void streamWrite(byte[] b, int off, int len) throws IOException {
+		if (this.os != null)
+			os.write(b, off, len);
 	}
 
 	/** Used in packetizers to estimate timestamps in RTP packets. */
@@ -145,7 +179,7 @@ abstract public class AbstractPacketizer {
 				//Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
 			}
 			if (c<5) {
-				// We ignore the first 20 measured values because they may not be accurate
+				// We ignore the first 5 measured values because they may not be accurate
 				c++;
 				m = value;
 			} else {

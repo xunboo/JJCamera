@@ -140,7 +140,7 @@ public class SessionBuilder {
 		if (session.getVideoTrack()!=null) {
 			VideoStream video = session.getVideoTrack();
 			if(mCameraInst!=null)
-				video.setUsedCamera(mCameraInst);	
+				video.setCameraInuse(mCameraInst);	
 			video.setFlashState(mFlash);
 			video.setVideoQuality(mVideoQuality);
 			video.setSurfaceView(mSurfaceView);
