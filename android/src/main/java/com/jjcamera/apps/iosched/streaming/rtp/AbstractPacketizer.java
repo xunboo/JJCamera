@@ -97,7 +97,7 @@ abstract public class AbstractPacketizer {
 
 	/** Resets the socket of packetizer. */
 	public void reset(){
-		socket.resetDest();
+		socket.reset();
 		getkey = false;
 	}
 

@@ -83,7 +83,7 @@ public class UriParser {
 		builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
 
 		builder.setVideoQuality(videoQuality).setVideoEncoder(videoEncoder);
-	//	builder.setAudioQuality(audioQuality).setAudioEncoder(audioEncoder);
+		builder.setAudioQuality(audioQuality).setAudioEncoder(audioEncoder);
 
 		Session session = builder.build();
 		

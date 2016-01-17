@@ -378,7 +378,7 @@ public class RtspServer extends Service {
 			mInput = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			mOutput = client.getOutputStream();
 			mClient = client;
-			//mSession = new Session();
+			mSession = new Session();
 		}
 
 		public void run() {

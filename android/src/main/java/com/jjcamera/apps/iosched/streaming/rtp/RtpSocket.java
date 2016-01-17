@@ -70,6 +70,7 @@ public class RtpSocket implements Runnable {
 	private AtomicInteger mBufferInOut;
 	private int mCount = 0;
 	private byte mTcpHeader[];
+	private byte mPayloadType;
 	protected OutputStream mOutputStream = null;
 	
 	private AverageBitrate mAverageBitrate;
@@ -100,6 +101,7 @@ public class RtpSocket implements Runnable {
 		mTransport = TRANSPORT_UDP;
 		mTcpHeader = new byte[] {'$',0,0,0};
 		mBufferInOut = new AtomicInteger();
+		mPayloadType = 96;
 		
 		resetFifo();
 
@@ -125,7 +127,7 @@ public class RtpSocket implements Runnable {
 		pPacketBuffer.mBuffers[0] = (byte) Integer.parseInt("10000000",2);
 
 		/* Payload Type */
-		pPacketBuffer.mBuffers[1] = (byte) 96;
+		pPacketBuffer.mBuffers[1] = (byte) mPayloadType;
 
 		/* Byte 2,3        ->  Sequence Number                   */
 		/* Byte 4,5,6,7    ->  Timestamp                         */
@@ -152,14 +154,27 @@ public class RtpSocket implements Runnable {
 		Log.d(TAG, "resetFifo");
 	}
 
-	public synchronized void resetDest(){
+	public synchronized void reset(){
 		this.mDest = null;
-	//	this.mPort = -1;
+
+		Thread t = mThread;
+
+		if (t != null) {
+			t.interrupt();
+			try {
+				t.join();
+			} catch (InterruptedException e) {}
+		}
 	}
 	
 	/** Closes the underlying socket. */
 	public void close() {
 		mSocket.close();
+	}
+
+	/** Sets the rtp payload type of the stream. */
+	public void setPayloadType(byte payloadType) {
+		this.mPayloadType= payloadType;
 	}
 
 	/** Sets the SSRC of the stream. */
@@ -234,14 +249,14 @@ public class RtpSocket implements Runnable {
 	public void createSendThread()  throws IOException {
 		if (mThread == null) {
 			mThread = new Thread(this);
-			mThread.setPriority(Thread.MAX_PRIORITY); 
+			//mThread.setPriority(Thread.MAX_PRIORITY); 
 			mThread.start();
 		}		
 	}
 	
 	/** 
 	 * Returns an available buffer from the FIFO, it can then be modified. 
-	 * Call {@link #commitBuffer(int)} to send it over the network. 
+	 * Call {@link #commitBuffer(int)} to send it over the network.
 	 * @throws InterruptedException 
 	 **/
 	public PacketBufferClass requestBuffer() throws InterruptedException {
@@ -287,9 +302,9 @@ public class RtpSocket implements Runnable {
 		mBufferQ.add(ppb);
 		mBufferCommitted.release();
 
-		if (mCount < 10){
+		if (mCount < 1){
 			Log.d(TAG, "commitBuffer-- Timestamp:" + ppb.mTimestamps + ", mBufferInOut: " + mBufferInOut);
-		}		
+		}	
 
 		createSendThread();
 	}
@@ -323,16 +338,19 @@ public class RtpSocket implements Runnable {
 
 	/** The Thread sends the packets in the FIFO one by one at a constant rate. */
 	@Override
-	public void run() {
+	public void run() {			
+		long delta = 0;
 		Statistics stats = new Statistics(50, 3000);
+		
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
 			Log.d(TAG, "rtp send thread is running now...");
 			Thread.sleep(mCacheSize);
-			long delta = 0;
-			while (mBufferCommitted.tryAcquire(4, TimeUnit.SECONDS)) {        //if no new data within 4 sec, thread exit
 
+			while ( mBufferCommitted.tryAcquire(4, TimeUnit.SECONDS) ) {        //if no new data within 4 sec, thread exit
+			
 				PacketBufferClass pNewData = mBufferQ.poll();
+				
 				if (pNewData == null) {
 					Log.e(TAG, "newdata is empty, it should not happen");
 					continue;
@@ -346,7 +364,7 @@ public class RtpSocket implements Runnable {
 					if (delta > 0) {
 						stats.push(delta);
 						long d = stats.average() / 1000000;
-						if( d > mCacheSize)
+						if( d > 1000 )
 							Log.d(TAG,"d: "+d+" delay: "+delta/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
 						if (mCacheSize > 0 && d < mCacheSize) Thread.sleep(d);
@@ -370,14 +388,15 @@ public class RtpSocket implements Runnable {
 						sendTCP(pNewData);
 					}
 
-					if (mCount < 10) {
+					if (mCount < 1) {
 						Log.d(TAG, "send " + pNewData.mPackets.getAddress().toString() + " -- Timestamp:" + pNewData.mTimestamps + ", mBufferInOut: " + mBufferInOut.get());
 					}
 				}
 				mBufferInOut.decrementAndGet();
 				//mBufferRequested.release();
 			}
-		} catch (Exception e) {
+		}catch (InterruptedException e) {}
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 		Log.d(TAG, "rtp send thread is stopping now...");

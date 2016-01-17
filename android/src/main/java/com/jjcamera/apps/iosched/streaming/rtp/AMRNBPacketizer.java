@@ -48,6 +48,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 	public AMRNBPacketizer() {
 		super();
 		socket.setClockFrequency(samplingRate);
+		socket.setPayloadType((byte)97);
 	}
 
 	public void start() {
@@ -75,6 +76,10 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 		int frameLength, frameType;
 		long now = System.nanoTime(), oldtime = now;
 		byte[] header = new byte[AMR_HEADER_LENGTH];
+
+		Log.d(TAG,"AMR packetizer started !");
+
+		//socket.setCacheSize(400);
 
 		try {
 

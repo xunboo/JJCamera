@@ -141,10 +141,11 @@ public class CameraActivity extends BaseActivity {
 
 					Session session = UriParser.easyparse();
 				 	session.syncConfigure();
-					if(!session.trackSyncing(1)){	//video
-						session.syncStart(1);
-					//if(!session.trackSyncing(0)){	//audio
-					//	session.syncStart(0);
+					if(session.getTrack(0) != null && !session.trackSyncing(0)){	//audio
+						session.syncStart(0);
+					}
+					if(session.getTrack(1) != null && !session.trackSyncing(1)){	//video
+						session.syncStart(1);						
             		}				
                 } catch (Exception e) {
                     e.printStackTrace();

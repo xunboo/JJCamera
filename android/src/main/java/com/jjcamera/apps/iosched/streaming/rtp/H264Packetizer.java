@@ -79,11 +79,13 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	public H264Packetizer() {
 		super();
 		socket.setClockFrequency(90000);
+		socket.setPayloadType((byte)96);
 	}
 
 	public void start() {
 		if (t == null) {
 			t = new Thread(this);
+			t.setPriority(Thread.MAX_PRIORITY); 
 			t.start();
 		}
 	}
@@ -228,7 +230,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			socket.markNextPacket(buffer.mBuffers);
 			socket.updateTimestamp(buffer, ts);
 			System.arraycopy(stapa, 0, buffer.mBuffers, rtphl, stapa.length);
-			streamWrite(buffer.mBuffers, rtphl, stapa.length);
+			//streamWrite(buffer.mBuffers, rtphl, stapa.length);
 			super.send(buffer, rtphl+stapa.length, keyFrameSync);
 		}
 
