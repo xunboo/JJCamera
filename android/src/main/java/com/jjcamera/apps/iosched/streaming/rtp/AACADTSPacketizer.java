@@ -45,6 +45,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 	public AACADTSPacketizer() {
 		super();
+		socket.setPayloadType((byte)97);
 	}
 
 	public void start() {

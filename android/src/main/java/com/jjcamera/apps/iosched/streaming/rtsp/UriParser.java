@@ -59,7 +59,7 @@ public class UriParser {
 	public static VideoQuality videoQuality = new VideoQuality(1280,720,20,5000000);
 
 	/** By default AMR is the audio encoder. */
-	public static int audioEncoder = SessionBuilder.AUDIO_AMRNB;
+	public static int audioEncoder = SessionBuilder.AUDIO_AAC;
 
 	/** By default H.264 is the video encoder. */
 	public static int videoEncoder = SessionBuilder.VIDEO_H264;
