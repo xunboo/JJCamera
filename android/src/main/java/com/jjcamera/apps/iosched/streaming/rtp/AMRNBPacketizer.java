@@ -79,7 +79,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 		Log.d(TAG,"AMR packetizer started !");
 
-		//socket.setCacheSize(400);
+		socket.setCacheSize(10);
 
 		try {
 
@@ -121,6 +121,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 			}
 
 		} catch (IOException e) { 
+			Log.e(TAG,"AMR packetizer IOException ! " + e.getMessage());	
 		} catch (InterruptedException e) {}
 
 		Log.d(TAG,"AMR packetizer stopped !");

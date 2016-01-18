@@ -66,7 +66,7 @@ public class EncoderDebugger {
 	private static final boolean DEBUG = false;
 	
 	/** Set this to true to see more logs. */
-	private static final boolean VERBOSE = false;
+	private static final boolean VERBOSE = true;
 
 	/** Will be incremented every time this test is modified. */
 	private static final int VERSION = 3;
@@ -198,6 +198,7 @@ public class EncoderDebugger {
 		int count = 0, n = 1;
 		for (int i=0;i<encoders.length;i++) {
 			count += encoders[i].formats.length;
+			if (VERBOSE) Log.v(TAG, "Get Encoder Name: " + encoders[i].name);
 		}
 		
 		// Tries available encoders
@@ -283,6 +284,8 @@ public class EncoderDebugger {
 					}
 
 					createTestImage();
+
+					//bypass it if test 720p or bigger
 					if (!compareChromaPanes(false)) {
 						if (compareChromaPanes(true)) {
 							mNV21.setColorPanesReversed(true);
@@ -567,6 +570,7 @@ public class EncoderDebugger {
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
 		mediaFormat.setByteBuffer("csd-0", csd0);
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mDecoderColorFormat);
+		mediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, mWidth * mHeight);
 		mDecoder.configure(mediaFormat, null, null, 0);
 		mDecoder.start();
 
@@ -743,7 +747,7 @@ public class EncoderDebugger {
 		ByteBuffer[] decOutputBuffers = mDecoder.getOutputBuffers();
 		BufferInfo info = new BufferInfo();
 
-		while (elapsed<3000000) {
+		while (elapsed<30000000) {      //30s for 720p
 
 			// Feeds the decoder with a NAL unit
 			if (i<NB_ENCODED) {

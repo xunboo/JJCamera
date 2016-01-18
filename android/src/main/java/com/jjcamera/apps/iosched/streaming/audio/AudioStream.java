@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import com.jjcamera.apps.iosched.streaming.MediaStream;
+import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
+
 import android.media.MediaRecorder;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -74,29 +76,35 @@ public abstract class AudioStream  extends MediaStream {
 		createSockets();
 
 		Log.v(TAG,"Requested audio with "+mQuality.bitRate/1000+"kbps"+" at "+mQuality.samplingRate/1000+"kHz");
-		
-		mMediaRecorder = new MediaRecorder();
-		mMediaRecorder.setAudioSource(mAudioSource);
-		mMediaRecorder.setOutputFormat(mOutputFormat);
-		mMediaRecorder.setAudioEncoder(mAudioEncoder);
-		mMediaRecorder.setAudioChannels(1);
-		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
-		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
-		
-		// We write the output of the camera in a local socket instead of a file !			
-		// This one little trick makes streaming feasible quiet simply: data from the camera
-		// can then be manipulated at the other end of the socket
-		FileDescriptor fd = null;
-		if (sPipeApi == PIPE_API_PFD) {
-			fd = mParcelWrite.getFileDescriptor();
-		} else  {
-			fd = mSender.getFileDescriptor();
-		}
-		mMediaRecorder.setOutputFile(fd);
-		mMediaRecorder.setOutputFile(fd);
 
-		mMediaRecorder.prepare();
-		mMediaRecorder.start();
+		try {
+			mMediaRecorder = new MediaRecorder();
+			mMediaRecorder.setAudioSource(mAudioSource);
+			mMediaRecorder.setOutputFormat(mOutputFormat);
+			mMediaRecorder.setAudioEncoder(mAudioEncoder);
+			mMediaRecorder.setAudioChannels(1);
+			mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
+			mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
+			
+			// We write the output of the camera in a local socket instead of a file !			
+			// This one little trick makes streaming feasible quiet simply: data from the camera
+			// can then be manipulated at the other end of the socket
+			FileDescriptor fd = null;
+			if (sPipeApi == PIPE_API_PFD) {
+				fd = mParcelWrite.getFileDescriptor();
+			} else  {
+				fd = mSender.getFileDescriptor();
+			}
+			mMediaRecorder.setOutputFile(fd);
+			mMediaRecorder.setOutputFile(fd);
+
+			mMediaRecorder.prepare();
+			mMediaRecorder.start();
+		}catch (Exception e) {
+			mMediaRecorder = null;
+
+			throw new ConfNotSupportedException(e.getMessage());
+		}
 
 		InputStream is = null;
 		

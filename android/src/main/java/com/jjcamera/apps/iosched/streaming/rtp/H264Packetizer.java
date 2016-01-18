@@ -94,9 +94,10 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		if (t != null) {
 			try {
 				is.close();
-
-				os.flush();
-				os.close();
+				if(os!=null) {
+					os.flush();
+					os.close();
+				}
 			} catch (IOException e) {}
 			t.interrupt();
 			try {
@@ -144,7 +145,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			socket.setCacheSize(0);
 		} else {
 			streamType = 0;	
-			socket.setCacheSize(400);	
+			socket.setCacheSize(10);
 		}
 
 		try {

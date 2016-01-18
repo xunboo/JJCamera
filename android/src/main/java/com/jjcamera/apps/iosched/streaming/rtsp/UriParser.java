@@ -76,8 +76,8 @@ public class UriParser {
 		
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
 
-		if(videoApi == MediaStream.MODE_MEDIACODEC_API)		//test purpose
-			videoQuality = new VideoQuality(640,480,20,500000);
+		//if(videoApi == MediaStream.MODE_MEDIACODEC_API)		//test purpose
+		//	videoQuality = new VideoQuality(640,480,20,500000);
 
 		builder.setFlashEnabled(false);
 		builder.setCamera(CameraInfo.CAMERA_FACING_BACK);

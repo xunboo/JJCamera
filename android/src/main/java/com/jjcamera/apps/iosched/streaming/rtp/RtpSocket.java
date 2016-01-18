@@ -367,7 +367,7 @@ public class RtpSocket implements Runnable {
 						if( d > 1000 )
 							Log.d(TAG,"d: "+d+" delay: "+delta/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-						if (mCacheSize > 0 && d < mCacheSize) Thread.sleep(d);
+						if (mCacheSize > 0 && d < 1000) Thread.sleep(d);
 					} else if (delta < 0) {
 						Log.e(TAG, "TS: " + pNewData.mTimestamps + " OLD: " + mOldTimestamp);
 					}
@@ -388,7 +388,7 @@ public class RtpSocket implements Runnable {
 						sendTCP(pNewData);
 					}
 
-					if (mCount < 1) {
+					if (mCount <= 1) {
 						Log.d(TAG, "send " + pNewData.mPackets.getAddress().toString() + " -- Timestamp:" + pNewData.mTimestamps + ", mBufferInOut: " + mBufferInOut.get());
 					}
 				}
