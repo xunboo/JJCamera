@@ -175,4 +175,7 @@ dependencies {
     // Needed to implement the IdlingResource interface on certain async models.
     compile 'com.android.support.test.espresso:espresso-idling-resource:2.0'
     compile 'com.google.guava:guava:18.0'
+
+    // Dependency for MP4 file
+    compile 'com.googlecode.mp4parser:isoparser:1.1.9'
 }

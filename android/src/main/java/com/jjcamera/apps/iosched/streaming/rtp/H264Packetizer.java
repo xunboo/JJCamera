@@ -20,10 +20,21 @@
 
 package com.jjcamera.apps.iosched.streaming.rtp;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
+
+import com.coremedia.iso.boxes.Container;
+import com.googlecode.mp4parser.FileDataSourceImpl;
+import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
+import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
+import com.jjcamera.apps.iosched.util.SDCardUtils;
 
 /**
  * 
@@ -50,6 +61,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	private final int keyFrameSync = 1;
 	
 	private final static int MAX_NALU_LENGTH = 10000000;	//10MB for 720p
+	private final static byte START_CODE[] = new byte[] { 0, 0, 0, 1 };		// H264 AnnexB format
 
 	public enum NalUnitType {
 	    NAL_UNKNOWN (0),
@@ -95,6 +107,24 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			try {
 				is.close();
 				if(os!=null) {
+					try {
+						// build a MP4 file
+						final String H264FILE = SDCardUtils.getExternalSdCardPath() + "/recorder-test.h264";
+						H264TrackImpl h264Track = new H264TrackImpl(new FileDataSourceImpl(H264FILE));
+
+						Movie movie = new Movie();
+						movie.addTrack(h264Track);
+
+						Container mp4file = new DefaultMp4Builder().build(movie);
+
+						FileChannel fc = new FileOutputStream(new File(SDCardUtils.getExternalSdCardPath() + "/output.mp4")).getChannel();
+						mp4file.writeContainer(fc);
+						fc.close();
+					}
+					catch(Exception e) {
+						e.printStackTrace();
+					}
+					
 					os.flush();
 					os.close();
 				}
@@ -113,7 +143,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 		// A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
 		if (pps != null && sps != null) {
-			// STAP-A NAL header + NALU 1 (SPS) size + NALU 2 (PPS) size = 5 bytes
+			// STAP-A NAL header + NALU 1 (SPS) size + NALU 2 (PPS) size + 5 bytes
 			stapa = new byte[sps.length + pps.length + 5];
 
 			// STAP-A NAL header is 24
@@ -211,8 +241,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 		// Parses the NAL unit type
 		type = header[4]&0x1F;
-
-
+	
 		// The stream already contains NAL unit type 7 or 8, we don't need 
 		// to add them to the stream ourselves
 		if (type == 7 || type == 8) {
@@ -231,9 +260,14 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			socket.markNextPacket(buffer.mBuffers);
 			socket.updateTimestamp(buffer, ts);
 			System.arraycopy(stapa, 0, buffer.mBuffers, rtphl, stapa.length);
-			//streamWrite(buffer.mBuffers, rtphl, stapa.length);
+			streamWrite(START_CODE, 0, 4);
+			streamWrite(stapa, 3, sps.length);
+			streamWrite(START_CODE, 0, 4);
+			streamWrite(stapa, sps.length + 5, pps.length);
 			super.send(buffer, rtphl+stapa.length, keyFrameSync);
 		}
+
+		streamWrite(START_CODE, 0, 4);
 
 		//Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
 
@@ -250,26 +284,29 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		}
 		// Large NAL unit => Split nal unit 
 		else {
+			streamWrite(header, 4, 1);
+			
 			// Set FU-A header
 			header[1] = (byte) (header[4] & 0x1F);  // FU header type
 			header[1] += 0x80; // Start bit
 			// Set FU-A indicator
 			header[0] = (byte) ((header[4] & 0x60) & 0xFF); // FU indicator NRI
 			header[0] += 28;
-
+			
 			while (sum < naluLength) {
 				buffer = socket.requestBuffer();
 				buffer.mBuffers[rtphl] = header[0];
 				buffer.mBuffers[rtphl+1] = header[1];
 				socket.updateTimestamp(buffer, ts);
-				if ((len = fill(buffer.mBuffers, rtphl+2,  naluLength-sum > MAXPACKETSIZE-rtphl-2 ? MAXPACKETSIZE-rtphl-2 : naluLength-sum  ))<0) return; sum += len;
+				if ((len = fill(buffer.mBuffers, rtphl+2,  naluLength-sum > MAXPACKETSIZE-rtphl-2 ? MAXPACKETSIZE-rtphl-2 : naluLength-sum  ))<0) return; 
+				sum += len;
 				// Last packet before next NAL
 				if (sum >= naluLength) {
 					// End bit on
 					buffer.mBuffers[rtphl+1] += 0x40;
 					socket.markNextPacket(buffer.mBuffers);
 				}
-				streamWrite(buffer.mBuffers, rtphl, len + 2);
+				streamWrite(buffer.mBuffers, rtphl + 2, len);
 				super.send(buffer, len+rtphl+2, 0);			
 				// Switch start bit
 				header[1] = (byte) (header[1] & 0x7F); 

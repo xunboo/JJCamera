@@ -415,13 +415,13 @@ public abstract class VideoStream extends MediaStream {
 			throw e;
 		}
 
-		final String TESTFILE = SDCardUtils.getExternalSdCardPath()+"/recorder-test.tsdump";
+		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder-test.h264";
 
-		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
+		Log.i(TAG,"Testing H264 support... Test file saved at: "+H264FILE);
 
 		FileOutputStream fop = null;
 		try {
-			File file = new File(TESTFILE);
+			File file = new File(H264FILE);
 			file.createNewFile();
 			fop = new FileOutputStream(file);
 		} catch (IOException e) {
