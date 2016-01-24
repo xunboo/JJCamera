@@ -21,20 +21,12 @@
 package com.jjcamera.apps.iosched.streaming.rtp;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
 
-import com.coremedia.iso.boxes.Container;
-import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
-import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
-import com.jjcamera.apps.iosched.util.SDCardUtils;
 
 /**
  * 
@@ -51,6 +43,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	public final static String TAG = "H264Packetizer";
 
 	private Thread t = null;
+	private volatile boolean mStopped = false;
+	
 	private int naluLength = 0;
 	private long delay = 0, oldtime = 0;
 	private Statistics stats = new Statistics();
@@ -96,6 +90,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	public void start() {
 		if (t == null) {
+			mStopped = false;
 			t = new Thread(this);
 			t.setPriority(Thread.MAX_PRIORITY); 
 			t.start();
@@ -104,36 +99,20 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	public void stop() {
 		if (t != null) {
-			try {
-				is.close();
-				if(os!=null) {
-					try {
-						// build a MP4 file
-						final String H264FILE = SDCardUtils.getExternalSdCardPath() + "/recorder-test.h264";
-						H264TrackImpl h264Track = new H264TrackImpl(new FileDataSourceImpl(H264FILE));
-
-						Movie movie = new Movie();
-						movie.addTrack(h264Track);
-
-						Container mp4file = new DefaultMp4Builder().build(movie);
-
-						FileChannel fc = new FileOutputStream(new File(SDCardUtils.getExternalSdCardPath() + "/output.mp4")).getChannel();
-						mp4file.writeContainer(fc);
-						fc.close();
-					}
-					catch(Exception e) {
-						e.printStackTrace();
-					}
-					
-					os.flush();
-					os.close();
-				}
-			} catch (IOException e) {}
-			t.interrupt();
+			//t.interrupt();
+			mStopped = true;
 			try {
 				t.join();
 			} catch (InterruptedException e) {}
 			t = null;
+
+			try {
+				is.close();
+				if(os!=null) {			
+					os.flush();
+					os.close();
+				}
+			} catch (IOException e) {}		
 		}
 	}
 
@@ -181,12 +160,13 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		try {
 			//socket.createSendThread();
 			
-			while (!Thread.interrupted()) {
+			while (!Thread.interrupted() && !mStopped) {
 
 				oldtime = System.nanoTime();
 				
 				// We read a NAL units from the input stream and we send them
 				send();
+				if(endstream)	break;
 				
 				// We measure how long it took to receive NAL units from the phone
 				duration = System.nanoTime() - oldtime;
@@ -241,6 +221,31 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 		// Parses the NAL unit type
 		type = header[4]&0x1F;
+
+		if(streamType == 0 && type == 0){	//unknown, will end of stream?
+			Log.d(TAG,"get 0 NAL type in the stream! Length = " +  naluLength);
+
+			int nBufLen = Math.min(8, naluLength);
+			byte pBuffer[] = new byte[nBufLen];
+
+			if(naluLength >= 8){
+				fill(pBuffer, 0, nBufLen);
+
+				if(pBuffer[3] == 'm' && pBuffer[4] == 'o' && pBuffer[5] == 'o' && pBuffer[6] == 'v'){
+					Log.d(TAG, "This is moov which is for MP4 info, ignore it and end stream");
+					endstream = true;
+					return;
+				}
+				else{
+					resync();
+					type = header[4]&0x1F;
+				}
+			}
+			else{
+				fill(pBuffer, 0, naluLength - 1);
+				return;
+			}
+		}
 	
 		// The stream already contains NAL unit type 7 or 8, we don't need 
 		// to add them to the stream ourselves

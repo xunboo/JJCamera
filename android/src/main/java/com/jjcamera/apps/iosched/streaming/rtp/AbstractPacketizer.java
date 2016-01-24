@@ -46,7 +46,8 @@ abstract public class AbstractPacketizer {
 	protected RtpSocket.PacketBufferClass buffer;
 	
 	protected long ts = 0;
-	protected boolean getkey = false;
+	protected volatile boolean startsend = false;
+	protected volatile boolean endstream = false;
 
 	public AbstractPacketizer() {
 		int ssrc = new Random().nextInt();
@@ -98,7 +99,8 @@ abstract public class AbstractPacketizer {
 	/** Resets the socket of packetizer. */
 	public void reset(){
 		socket.reset();
-		getkey = false;
+		startsend = false;
+		endstream = false;
 	}
 
 	/** Updates data for RTCP SR and sends the packet. */
@@ -114,11 +116,11 @@ abstract public class AbstractPacketizer {
 		InetAddress dest = socket.getDestination();
 		
 		if(dest != null){		// key is for h264 
-			if(key == 1 && !getkey)	{				
-				getkey = true;
+			if(key == 1 && !startsend)	{				
+				startsend = true;
 				//Log.v(TAG, "get first key frame type in the stream.")
 			}
-			if(getkey)
+			if(startsend)
 				socket.commitBuffer(ppb, dest, length);
 		}
 	}

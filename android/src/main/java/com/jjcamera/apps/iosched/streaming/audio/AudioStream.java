@@ -20,12 +20,17 @@
 
 package com.jjcamera.apps.iosched.streaming.audio;
 
+import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 import com.jjcamera.apps.iosched.streaming.MediaStream;
 import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
+import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableException;
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
+import com.jjcamera.apps.iosched.util.SDCardUtils;
 
 import android.media.MediaRecorder;
 import android.os.ParcelFileDescriptor;
@@ -120,7 +125,23 @@ public abstract class AudioStream  extends MediaStream {
 			}
 		}
 
+		final String AACFILE = SDCardUtils.getExternalSdCardPath()+"/recorder.aac";
+
+		Log.i(TAG,"Saving temp AAC file at: "+AACFILE);
+
+		FileOutputStream fop = null;
+		try {
+			File file = new File(AACFILE);
+			file.createNewFile();
+			fop = new FileOutputStream(file);
+
+			MP4Muxer.getInstance().setAudioSource(AACFILE);
+		} catch (IOException e) {
+			throw new StorageUnavailableException(e.getMessage());
+		}		
+
 		// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
+		mPacketizer.setOutputStream(fop);
 		mPacketizer.setInputStream(is);
 		mPacketizer.start();
 		mStreaming = true;

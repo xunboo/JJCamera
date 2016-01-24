@@ -45,27 +45,34 @@ public class SDCardUtils {
 		                File file = new File(sdRoot, sdPath);
 		                
 		                if (file.isDirectory() && file.canWrite()) {
-		                        path = file.getAbsolutePath();
+		                        path = file.getAbsolutePath() + "/JJCamera";
 		                        
-		                        String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmmss").format(new Date());
-		                        File testWritable = new File(path, "test_" + timeStamp);
+		                        File testWritable = new File(path);
+
+								if(testWritable.isDirectory())
+									break;
 		                        
 		                        if (testWritable.mkdirs()) {
-		                                testWritable.delete();
-										break;
+									break;
 		                        }
 		                        else {
-		                                path = null;
+		                        	path = null;
 		                        }
 		                }
 		        }
 			}
 	        
 	        if (path != null) {
-	                sdCardFile = new File(path);
+	        	sdCardFile = new File(path);
 	        }
 	        else {
-	                sdCardFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath());
+	        	sdCardFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/JJCamera");
+				if(!sdCardFile.exists())
+					sdCardFile.mkdirs();
+				else if(!sdCardFile.isDirectory()){
+					sdCardFile.delete();
+					sdCardFile.mkdirs();
+				}
 	        }
 	        
 	        return sdCardFile.getAbsolutePath();

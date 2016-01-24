@@ -39,6 +39,7 @@ import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableExceptio
 import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
 import com.jjcamera.apps.iosched.streaming.hw.EncoderDebugger;
 import com.jjcamera.apps.iosched.streaming.hw.NV21Convertor;
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.streaming.rtp.MediaCodecInputStream;
 import com.jjcamera.apps.iosched.util.SDCardUtils;
 
@@ -415,15 +416,17 @@ public abstract class VideoStream extends MediaStream {
 			throw e;
 		}
 
-		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder-test.h264";
+		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder.h264";
 
-		Log.i(TAG,"Testing H264 support... Test file saved at: "+H264FILE);
+		Log.i(TAG,"Saving temp H264 file at: "+H264FILE);
 
 		FileOutputStream fop = null;
 		try {
 			File file = new File(H264FILE);
 			file.createNewFile();
 			fop = new FileOutputStream(file);
+
+			MP4Muxer.getInstance().setVideoSource(H264FILE);
 		} catch (IOException e) {
 			throw new StorageUnavailableException(e.getMessage());
 		}

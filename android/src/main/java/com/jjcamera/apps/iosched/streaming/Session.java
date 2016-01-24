@@ -32,6 +32,7 @@ import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
 import com.jjcamera.apps.iosched.streaming.exceptions.InvalidSurfaceException;
 import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableException;
 import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.streaming.rtsp.RtspClient;
 import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
 import com.jjcamera.apps.iosched.streaming.video.VideoStream;
@@ -511,17 +512,14 @@ public class Session {
 			UnknownHostException,
 			IOException {
 
-		syncStart(1);
-		try {
-			syncStart(0);
-		} catch (RuntimeException e) {
-			syncStop(1);
-			throw e;
-		} catch (IOException e) {
-			syncStop(1);
-			throw e;
-		}
+			if(getTrack(0) != null && !trackSyncing(0)){	//audio
+				syncStart(0);
+			}
+			if(getTrack(1) != null && !trackSyncing(1)){	//video
+				syncStart(1);						
+            }	
 
+			MP4Muxer.getInstance().start();
 	}	
 
 	/** Stops all existing streams. */
@@ -549,6 +547,8 @@ public class Session {
 	public void syncStop() {
 		syncStop(0);
 		syncStop(1);
+
+		MP4Muxer.getInstance().stop();
 		postSessionStopped();
 	}
 

@@ -41,6 +41,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	private final static String TAG = "AACADTSPacketizer";
 
 	private Thread t;
+	private volatile boolean mStopped = false;
+	
 	private int samplingRate = 8000;
 
 	public AACADTSPacketizer() {
@@ -50,6 +52,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 	public void start() {
 		if (t==null) {
+			mStopped = false;
 			t = new Thread(this);
 			t.start();
 		}
@@ -57,14 +60,20 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 	public void stop() {
 		if (t != null) {
-			try {
-				is.close();
-			} catch (IOException ignore) {}
-			t.interrupt();
+			//t.interrupt();
+			mStopped = true;
 			try {
 				t.join();
 			} catch (InterruptedException e) {}
 			t = null;
+
+			try {
+				is.close();
+				if(os!=null) {			
+					os.flush();
+					os.close();
+				}			
+			} catch (IOException ignore) {}		
 		}
 	}
 
@@ -90,18 +99,23 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		byte[] header = new byte[8]; 
 
 		try {
-			while (!Thread.interrupted()) {
+			while (!Thread.interrupted() && !mStopped) {
 
 				// Synchronisation: ADTS packet starts with 12bits set to 1
 				while (true) {
 					if ( (is.read()&0xFF) == 0xFF ) {
 						header[1] = (byte) is.read();
-						if ( (header[1]&0xF0) == 0xF0) break;
+						if ( (header[1]&0xF0) == 0xF0) {
+							byte st[] = new byte[] {(byte)0xFF, header[1]};
+							streamWrite(st, 0, 2);
+							break;
+						}
 					}
 				}
 
 				// Parse adts header (ADTS packets start with a 7 or 9 byte long header)
 				fill(header, 2, 5);
+				streamWrite(header, 2 , 5);
 
 				// The protection bit indicates whether or not the header contains the two extra bytes
 				protection = (header[1]&0x01)>0 ? true : false;
@@ -117,7 +131,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				nbpk = frameLength/MAXPACKETSIZE + 1;
 
 				// Read CRS if any
-				if (!protection) is.read(header,0,2);
+				if (!protection){
+					is.read(header,0,2);
+					streamWrite(header, 0 , 2);
+				}
 
 				samplingRate = AACStream.AUDIO_SAMPLING_RATES[(header[2]&0x3C) >> 2];
 				profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
@@ -143,6 +160,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 					}
 					sum += length;
 					fill(buffer.mBuffers, rtphl+4, length);
+					streamWrite(buffer.mBuffers, rtphl+4, length);
 
 					// AU-headers-length field: contains the size in bits of a AU-header
 					// 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta 
@@ -164,6 +182,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 			}
 		} catch (IOException e) {
+			Log.e(TAG,"AACADTS packetizer IOException ! " + e.getMessage());	
 			// Ignore
 		} catch (ArrayIndexOutOfBoundsException e) {
 			Log.e(TAG,"ArrayIndexOutOfBoundsException: "+(e.getMessage()!=null?e.getMessage():"unknown error"));
