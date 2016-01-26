@@ -177,5 +177,5 @@ dependencies {
     compile 'com.google.guava:guava:18.0'
 
     // Dependency for MP4 file
-    compile 'com.googlecode.mp4parser:isoparser:1.1.9'
+    compile 'com.googlecode.mp4parser:isoparser:1.1.17'
 }

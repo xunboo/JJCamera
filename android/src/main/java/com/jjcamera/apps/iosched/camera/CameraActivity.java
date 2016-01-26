@@ -19,6 +19,7 @@ package com.jjcamera.apps.iosched.camera;
 import com.jjcamera.apps.iosched.AppApplication;
 import com.jjcamera.apps.iosched.R;
 import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.streaming.rtsp.UriParser;
 import com.jjcamera.apps.iosched.ui.BaseActivity;
 import com.jjcamera.apps.iosched.ui.widget.DrawShadowFrameLayout;
@@ -108,6 +109,7 @@ public class CameraActivity extends BaseActivity {
             switch (v.getId()) {
                 case R.id.camera_switch:
                     switchCamera();
+                    //MP4Muxer.muxerFileDebug();
                     break;
                 case R.id.camera_record:
                     sCameraRunning = !sCameraRunning;
@@ -133,11 +135,14 @@ public class CameraActivity extends BaseActivity {
             @Override
             public void run() {
                 try {
-                /*    mh264Inst = new H264Stream();
-					mh264Inst.enableDebug();
-					mh264Inst.setSurfaceView(surfaceView);
-					mh264Inst.setCameraInuse(cameraInst);					
-                    mh264Inst.start();*/
+					int test = 0;
+					if(test == 1){
+	                    mh264Inst = new H264Stream();
+						mh264Inst.enableDebug();
+						mh264Inst.setSurfaceView(surfaceView);
+						mh264Inst.setCameraInuse(cameraInst);					
+	                    mh264Inst.start();
+					}
 
 					Session session = UriParser.easyparse();
 				 	session.syncConfigure();
@@ -242,6 +247,10 @@ public class CameraActivity extends BaseActivity {
     private void initCamera() {
         parameters = cameraInst.getParameters();
         parameters.setPictureFormat(PixelFormat.JPEG);
+
+		VideoQuality mQuality = VideoQuality.determineClosestSupportedResolution(parameters, UriParser.videoQuality);
+		if(mQuality != UriParser.videoQuality) UriParser.videoQuality = mQuality;
+				
         //if (adapterSize == null) {
         setUpPicSize(parameters);
         setUpPreviewSize(parameters);

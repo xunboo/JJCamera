@@ -173,7 +173,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				stats.push(duration);
 				// Computes the average duration of a NAL unit
 				delay = stats.average();
-				if(run++ < 10)
+				if(run++ < 10 || delay > 500000000)
 					Log.d(TAG,"duration: "+duration/1000000+" delay: "+delay/1000000 + " ts: " + ts);
 			}
 		} catch (IOException e) {

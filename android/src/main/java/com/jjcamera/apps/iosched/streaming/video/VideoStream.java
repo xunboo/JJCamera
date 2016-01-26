@@ -353,6 +353,7 @@ public abstract class VideoStream extends MediaStream {
 		// Reopens the camera if needed
 		destroyCamera();
 		createCamera();
+		//updateCamera();
 
 		// The camera must be unlocked before the MediaRecorder can use it
 		unlockCamera();
@@ -365,7 +366,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
 			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());	
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX, mRequestedQuality.resY);
-			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
+			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);	//wtf, it is always 25 fps in the stream even I set 20 fps
 			//if(mOrientation == 90)
 			//	mMediaRecorder.setOrientationHint(90);				
 
@@ -741,6 +742,9 @@ public abstract class VideoStream extends MediaStream {
 		
 		parameters.setPreviewFormat(mCameraImageFormat);
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+		//int cur_fr = mQuality.framerate * 1000;
+		//if(max[0] < cur_fr && cur_fr < max[1])
+		//	max[0] = max[1] = cur_fr;
 		parameters.setPreviewFpsRange(max[0], max[1]);
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);   //focus
 

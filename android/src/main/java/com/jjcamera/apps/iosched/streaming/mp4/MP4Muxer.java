@@ -37,6 +37,7 @@ import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.tracks.AACTrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.jjcamera.apps.iosched.streaming.rtsp.UriParser;
 import com.jjcamera.apps.iosched.util.SDCardUtils;
@@ -130,6 +131,10 @@ public class MP4Muxer {
 		mReady = 0;
 	}
 
+	public static void muxerFileDebug(){
+		muxerFile(SDCardUtils.getExternalSdCardPath()+"/recorder.h264", SDCardUtils.getExternalSdCardPath()+"/recorder.aac" );
+	}
+
 	private static void muxerFile(String videoFile, String audioFile){		
 		try {
 			Log.i(TAG,  "generate a MP4 file...");
@@ -144,14 +149,29 @@ public class MP4Muxer {
 
 			Movie movie = new Movie();
 			movie.addTrack(h264Track);
-			if(aacTrack != null)
+			if(aacTrack != null){
+				/*
+					In AAC there are always samplerate/1024 sample/s so each sample's duration is 1000 * 1024 / samplerate milliseconds.
+
+					48KHz => ~21.3ms
+					44.1KHz => ~23.2ms
+					By omitting samples from the start you can easily shorten the audio track. Remove as many as you need. You will not be able to match audio and video exactly with that but the human perception is more sensible to early audio than to late audio.
+				*/
+				Log.i(TAG,  "video getDuration " + h264Track.getDuration() );
+				Log.i(TAG,  "audio getDuration " + aacTrack.getDuration() );
+				Log.i(TAG, "audio length (ms) " + aacTrack.getSamples().size() * 128);
+				//int offset = 10;// 1300/ (1000 * 1024 / 8000);
+				//CroppedTrack aacTrackShort = new CroppedTrack(aacTrack, offset, aacTrack.getSamples().size());
 				movie.addTrack(aacTrack);
+			}
 
 			Container mp4file = new DefaultMp4Builder().build(movie);
 
 			FileChannel fc = new FileOutputStream(new File(SDCardUtils.getExternalSdCardPath() + "/output.mp4")).getChannel();
 			mp4file.writeContainer(fc);
 			fc.close();
+
+			Log.i(TAG,  "finish a MP4 file...");
 		}
 		catch(Exception e) {
 			e.printStackTrace();

@@ -31,6 +31,8 @@ import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableExceptio
 import com.jjcamera.apps.iosched.streaming.hw.EncoderDebugger;
 import com.jjcamera.apps.iosched.streaming.mp4.MP4Config;
 import com.jjcamera.apps.iosched.streaming.rtp.H264Packetizer;
+import com.jjcamera.apps.iosched.util.SDCardUtils;
+
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
@@ -55,7 +57,7 @@ public class H264Stream extends VideoStream {
 	private Semaphore mLock = new Semaphore(0);
 	private MP4Config mConfig;
 
-	private boolean mDebug = false;
+	private static boolean mDebug = false;
 
 	/**
 	 * Constructs the H.264 stream.
@@ -156,7 +158,7 @@ public class H264Stream extends VideoStream {
 			throw new StorageUnavailableException("No external storage or external storage not ready !");
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/jjcamera-test.mp4";
+		final String TESTFILE = SDCardUtils.getExternalSdCardPath()+"/jjcamera-test.mp4";
 		
 		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
 
@@ -199,10 +201,15 @@ public class H264Stream extends VideoStream {
 			//follow audio video order  http://developer.android.com/guide/topics/media/camera.html#capture-video
 			mMediaRecorder = new MediaRecorder();
 			mMediaRecorder.setCamera(mCamera);
-			if(mDebug) mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+			if(mDebug)  mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
 			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);			
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);			
-    		if(mDebug)	mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+    		if(mDebug)	{
+				mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+				mMediaRecorder.setAudioChannels(1);
+				mMediaRecorder.setAudioSamplingRate(8000);
+				mMediaRecorder.setAudioEncodingBitRate(32000);
+    		}
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
 			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);

@@ -31,6 +31,8 @@ import com.jjcamera.apps.iosched.streaming.SessionBuilder;
 import com.jjcamera.apps.iosched.streaming.rtp.AACADTSPacketizer;
 import com.jjcamera.apps.iosched.streaming.rtp.AACLATMPacketizer;
 import com.jjcamera.apps.iosched.streaming.rtp.MediaCodecInputStream;
+import com.jjcamera.apps.iosched.util.SDCardUtils;
+
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -302,7 +304,7 @@ public class AACStream extends AudioStream {
 			}
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/jjcamera-test.adts";
+		final String TESTFILE = SDCardUtils.getExternalSdCardPath()+"/jjcamera-test.adts";
 
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
