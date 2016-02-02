@@ -250,6 +250,8 @@ public class CameraActivity extends BaseActivity {
 
 		VideoQuality mQuality = VideoQuality.determineClosestSupportedResolution(parameters, UriParser.videoQuality);
 		if(mQuality != UriParser.videoQuality) UriParser.videoQuality = mQuality;
+
+		parameters.setPreviewFpsRange(UriParser.videoQuality.framerate*1000,UriParser.videoQuality.framerate*1000);
 				
         //if (adapterSize == null) {
         setUpPicSize(parameters);

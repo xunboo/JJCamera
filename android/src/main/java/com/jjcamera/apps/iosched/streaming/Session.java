@@ -517,9 +517,7 @@ public class Session {
 			}
 			if(getTrack(1) != null && !trackSyncing(1)){	//video
 				syncStart(1);						
-            }	
-
-			MP4Muxer.getInstance().start();
+            }
 	}	
 
 	/** Stops all existing streams. */

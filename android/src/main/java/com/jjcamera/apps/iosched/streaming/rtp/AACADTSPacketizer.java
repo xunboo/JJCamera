@@ -20,9 +20,13 @@
 
 package com.jjcamera.apps.iosched.streaming.rtp;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import com.jjcamera.apps.iosched.streaming.audio.AACStream;
+import com.jjcamera.apps.iosched.streaming.audio.AudioStream;
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
+
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -100,6 +104,14 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 		try {
 			while (!Thread.interrupted() && !mStopped) {
+
+				if(MP4Muxer.getInstance().getVideoReady()){
+					MP4Muxer.getInstance().setAudioReady();
+					MP4Muxer.getInstance().collect();
+
+					FileOutputStream fop = AudioStream.createTempRecorder();
+					setOutputStream(fop);
+				}
 
 				// Synchronisation: ADTS packet starts with 12bits set to 1
 				while (true) {

@@ -25,12 +25,15 @@ import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 
 import com.jjcamera.apps.iosched.streaming.MediaStream;
+import com.jjcamera.apps.iosched.streaming.SessionBuilder;
 import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
 import com.jjcamera.apps.iosched.streaming.exceptions.StorageUnavailableException;
 import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.util.SDCardUtils;
+import com.jjcamera.apps.iosched.util.UIUtils;
 
 import android.media.MediaRecorder;
 import android.os.ParcelFileDescriptor;
@@ -125,9 +128,20 @@ public abstract class AudioStream  extends MediaStream {
 			}
 		}
 
-		final String AACFILE = SDCardUtils.getExternalSdCardPath()+"/recorder.aac";
+		FileOutputStream fop = createTempRecorder();	
 
-		Log.i(TAG,"Saving temp AAC file at: "+AACFILE);
+		// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
+		mPacketizer.setOutputStream(fop);
+		mPacketizer.setInputStream(is);
+		mPacketizer.start();
+		mStreaming = true;
+		
+	}
+
+	static public FileOutputStream createTempRecorder(){
+		final String AACFILE = SDCardUtils.getExternalSdCardPath()+"/recorder" + (new Date()).getTime() + ".aac";
+
+		Log.i(TAG, "Saving temp AACFILE file at: " + AACFILE);
 
 		FileOutputStream fop = null;
 		try {
@@ -137,15 +151,10 @@ public abstract class AudioStream  extends MediaStream {
 
 			MP4Muxer.getInstance().setAudioSource(AACFILE);
 		} catch (IOException e) {
-			throw new StorageUnavailableException(e.getMessage());
-		}		
-
-		// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-		mPacketizer.setOutputStream(fop);
-		mPacketizer.setInputStream(is);
-		mPacketizer.start();
-		mStreaming = true;
-		
+			//throw new StorageUnavailableException(e.getMessage());
+			UIUtils.exceptionToast(SessionBuilder.getInstance().getContext(), e.getMessage());
+		}
+		return fop;
 	}
 	
 }

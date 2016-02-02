@@ -747,7 +747,7 @@ public class EncoderDebugger {
 		ByteBuffer[] decOutputBuffers = mDecoder.getOutputBuffers();
 		BufferInfo info = new BufferInfo();
 
-		while (elapsed<30000000) {      //30s for 720p
+		while (elapsed<3000000) {      //30s for 720p
 
 			// Feeds the decoder with a NAL unit
 			if (i<NB_ENCODED) {

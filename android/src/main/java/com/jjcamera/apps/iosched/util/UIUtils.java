@@ -50,6 +50,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.jjcamera.apps.iosched.BuildConfig;
 import com.jjcamera.apps.iosched.Config;
@@ -650,4 +651,9 @@ public class UIUtils {
 
         return paintDrawable;
     }
+
+	public static void exceptionToast(Context context, String message) {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+	}
+
 }

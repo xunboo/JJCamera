@@ -172,12 +172,11 @@ public class H264Stream extends VideoStream {
 		// Save flash state & set it to false so that led remains off while testing h264
 		boolean savedFlashState = mFlashEnabled;
 		mFlashEnabled = false;
-
-		boolean previewStarted = mPreviewStarted;
 		
 		boolean cameraOpen = mCamera!=null;
 		createCamera();
 		cameraOpen = mCamera!=null;
+		boolean previewStarted = mPreviewStarted;
 
 		// Stops the preview if needed
 		if (mPreviewStarted) {

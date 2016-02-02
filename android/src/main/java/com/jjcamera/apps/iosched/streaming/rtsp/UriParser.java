@@ -56,7 +56,7 @@ public class UriParser {
 	public static AudioQuality audioQuality = new AudioQuality(8000,32000);
 
 	/** Default quality of video streams. */
-	public static VideoQuality videoQuality = new VideoQuality(1280,720,25,5000000);
+	public static VideoQuality videoQuality = new VideoQuality(640,480,10,1000000);
 
 	/** By default AMR is the audio encoder. */
 	public static int audioEncoder = SessionBuilder.AUDIO_AAC;
@@ -75,9 +75,6 @@ public class UriParser {
 		//byte videoApi = MediaStream.MODE_MEDIACODEC_API;	
 		
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
-
-		//if(videoApi == MediaStream.MODE_MEDIACODEC_API)		//test purpose
-		//	videoQuality = new VideoQuality(640,480,20,500000);
 
 		builder.setFlashEnabled(false);
 		builder.setCamera(CameraInfo.CAMERA_FACING_BACK);

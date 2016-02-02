@@ -24,6 +24,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.io.File;
@@ -31,6 +32,7 @@ import java.io.FileOutputStream;
 
 
 import com.jjcamera.apps.iosched.streaming.MediaStream;
+import com.jjcamera.apps.iosched.streaming.SessionBuilder;
 import com.jjcamera.apps.iosched.streaming.Stream;
 import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
 import com.jjcamera.apps.iosched.streaming.exceptions.ConfNotSupportedException;
@@ -42,6 +44,7 @@ import com.jjcamera.apps.iosched.streaming.hw.NV21Convertor;
 import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.streaming.rtp.MediaCodecInputStream;
 import com.jjcamera.apps.iosched.util.SDCardUtils;
+import com.jjcamera.apps.iosched.util.UIUtils;
 
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
@@ -366,7 +369,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
 			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());	
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX, mRequestedQuality.resY);
-			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);	//wtf, it is always 25 fps in the stream even I set 20 fps
+			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);	//setPreviewFpsRangeset match with fps
 			//if(mOrientation == 90)
 			//	mMediaRecorder.setOrientationHint(90);				
 
@@ -417,7 +420,19 @@ public abstract class VideoStream extends MediaStream {
 			throw e;
 		}
 
-		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder.h264";
+		FileOutputStream fop = createTempRecorder();
+
+		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
+		mPacketizer.setOutputStream(fop);
+		mPacketizer.setInputStream(is);
+		mPacketizer.start();
+
+		mStreaming = true;
+
+	}
+
+	static public FileOutputStream createTempRecorder(){
+		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder" + (new Date()).getTime() + ".h264";
 
 		Log.i(TAG,"Saving temp H264 file at: "+H264FILE);
 
@@ -429,18 +444,11 @@ public abstract class VideoStream extends MediaStream {
 
 			MP4Muxer.getInstance().setVideoSource(H264FILE);
 		} catch (IOException e) {
-			throw new StorageUnavailableException(e.getMessage());
+			//throw new StorageUnavailableException(e.getMessage());
+			UIUtils.exceptionToast(SessionBuilder.getInstance().getContext(), e.getMessage());
 		}
-
-		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
-		mPacketizer.setOutputStream(fop);
-		mPacketizer.setInputStream(is);
-		mPacketizer.start();
-
-		mStreaming = true;
-
+		return fop;
 	}
-
 
 	/**
 	 * Video encoding is done by a MediaCodec.

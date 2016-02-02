@@ -21,11 +21,15 @@
 package com.jjcamera.apps.iosched.streaming.rtp;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
+
+import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
+import com.jjcamera.apps.iosched.streaming.video.VideoStream;
 
 
 /**
@@ -255,6 +259,22 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			if (count>4) {
 				sps = null;
 				pps = null;
+			}
+		}
+
+		if(type == 5){
+			long time = MP4Muxer.getInstance().getVideoStartTime();
+			long now = System.nanoTime();
+
+			if(time == 0){
+				MP4Muxer.getInstance().setVideoStartTime(now);
+			}
+			else if((now - time) > 60000000000L){		// 1 min
+				MP4Muxer.getInstance().setVideoReady();
+				FileOutputStream fop = VideoStream.createTempRecorder();
+				setOutputStream(fop);
+				
+				MP4Muxer.getInstance().setVideoStartTime(now);
 			}
 		}
 
