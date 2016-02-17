@@ -121,5 +121,17 @@ public class SDCardUtils {
 		}
 	}*/
 
+	public static String getExternalSdCardPathForVideo() {
+		File sdCardFile = new File(getExternalSdCardPath() + "/Video");
+		if(!sdCardFile.exists())
+			sdCardFile.mkdirs();
+		else if(!sdCardFile.isDirectory()){
+			sdCardFile.delete();
+			sdCardFile.mkdirs();
+		}
+
+		return sdCardFile.getAbsolutePath();
+	}
+
 }
 

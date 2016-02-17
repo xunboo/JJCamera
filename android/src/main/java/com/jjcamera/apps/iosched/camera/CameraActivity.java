@@ -43,6 +43,7 @@ import android.util.DisplayMetrics;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.hardware.Camera;
@@ -82,7 +83,6 @@ public class CameraActivity extends BaseActivity {
     private static int mCurrentCameraId = 0;
     private static Camera.Parameters parameters = null;
     private static Camera cameraInst = null;
-    private boolean sCameraRunning = false;
 
 	private static H264Stream mh264Inst;
 
@@ -112,9 +112,7 @@ public class CameraActivity extends BaseActivity {
                     //MP4Muxer.muxerFileDebug();
                     break;
                 case R.id.camera_record:
-                    sCameraRunning = !sCameraRunning;
-
-					if(sCameraRunning)
+					if(UriParser.getSession() == null)
 						StartRecordVideo();
 					else
 						StopRecordVideo();
@@ -127,7 +125,7 @@ public class CameraActivity extends BaseActivity {
 
     private void RefreshMonitorText(){
         TextView body = (TextView) rootView.findViewById(R.id.camera_main);
-        body.setText(sCameraRunning ? R.string.record_start : R.string.record_stop);
+        body.setText(UriParser.getSession() != null ? R.string.record_start : R.string.record_stop);
     }
 
     private void recordHelper() {
@@ -163,10 +161,13 @@ public class CameraActivity extends BaseActivity {
 		//mh264Inst.stop();
 
 		Session session = UriParser.getSession();
-		session.syncStop();
-		session.release();
+		if(session != null)
+		{
+			session.syncStop();
+			session.release();
 
-		UriParser.clearSession();
+			UriParser.clearSession();
+		}
 	}
 	
 
@@ -179,6 +180,13 @@ public class CameraActivity extends BaseActivity {
         surfaceView = (SurfaceView)findViewById(R.id.surfaceView);
 
         findViewById(R.id.masking).setVisibility(View.GONE);
+
+        /*ViewGroup.LayoutParams lp = surfaceView.getLayoutParams();
+	    //lp.leftMargin = left;
+	    //lp.topMargin = right;
+	    lp.width = AppApplication.getApp().getScreenWidth();
+	    lp.height = UriParser.videoQuality.resY;
+	    surfaceView.setLayoutParams(lp);*/
 
         mCameraHelper = new CameraHelper(this);
 
@@ -195,6 +203,8 @@ public class CameraActivity extends BaseActivity {
         overridePendingTransition(0, 0);
 
         initView();
+
+		MP4Muxer.setRotationMatrix(getRotationDegree());
     }
 
     private void initView() {
@@ -203,7 +213,8 @@ public class CameraActivity extends BaseActivity {
         surfaceHolder.setKeepScreenOn(true);
         surfaceView.setFocusable(true);
         surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
-        surfaceView.getHolder().addCallback(new SurfaceCallback());
+        surfaceView.getHolder().addCallback(new SurfaceCallback());	
+		//surfaceView.getHolder().setFixedSize(UriParser.videoQuality.resX, UriParser.videoQuality.resY);
 
         boolean canSwitch = false;
         try {
@@ -240,6 +251,17 @@ public class CameraActivity extends BaseActivity {
 		//StartRecordVideo();
     }
 
+	@Override
+    protected void onPause() {
+        super.onPause();
+
+		if(UriParser.getSession() != null)
+		{
+        	StopRecordVideo();
+			UIUtils.DisplayToast(this, getResources().getString(R.string.record_interrupt));
+		}
+    }
+
     private void openUrl(String url) {
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
     }
@@ -247,9 +269,11 @@ public class CameraActivity extends BaseActivity {
     private void initCamera() {
         parameters = cameraInst.getParameters();
         parameters.setPictureFormat(PixelFormat.JPEG);
+		parameters.setJpegQuality(100);
 
 		VideoQuality mQuality = VideoQuality.determineClosestSupportedResolution(parameters, UriParser.videoQuality);
 		if(mQuality != UriParser.videoQuality) UriParser.videoQuality = mQuality;
+		LOGI(TAG, "videoSize: " + UriParser.videoQuality.resX + "x" + UriParser.videoQuality.resY);
 
 		parameters.setPreviewFpsRange(UriParser.videoQuality.framerate*1000,UriParser.videoQuality.framerate*1000);
 				
@@ -264,8 +288,6 @@ public class CameraActivity extends BaseActivity {
         if (previewSize != null) {
 			LOGI(TAG, "previewSize: " + previewSize.width + "x" + previewSize.height);
             parameters.setPreviewSize(previewSize.width, previewSize.height);
-
-		//	surfaceView.getHolder().setFixedSize(previewSize.width, previewSize.height);
         }
 
 
@@ -288,20 +310,19 @@ public class CameraActivity extends BaseActivity {
         if (adapterSize != null) {
             return;
         } else {
-            adapterSize = findBestPictureResolution();
+            adapterSize = findBestPictureResolution(parameters);
         }
     }
 
-    private void setUpPreviewSize(Camera.Parameters parameters) {
+    private void setUpPreviewSize(Camera.Parameters parameters) {		
         if (previewSize != null) {
             return;
         } else {
-            previewSize = findBestPreviewResolution();
+            previewSize = findBestPreviewResolution(parameters);
         }
     }
 
-    private Camera.Size findBestPreviewResolution() {
-        Camera.Parameters cameraParameters = cameraInst.getParameters();
+    private Camera.Size findBestPreviewResolution(Camera.Parameters cameraParameters) {
         Camera.Size defaultPreviewResolution = cameraParameters.getPreviewSize();
 
         List<Camera.Size> rawSupportedSizes = cameraParameters.getSupportedPreviewSizes();
@@ -331,11 +352,16 @@ public class CameraActivity extends BaseActivity {
             previewResolutionSb.append(supportedPreviewResolution.width).append('x').append(supportedPreviewResolution.height)
                     .append(' ');
         }
-        LOGV(TAG, "Supported preview resolutions: " + previewResolutionSb);
+        LOGI(TAG, "Supported preview resolutions: " + previewResolutionSb);
 
 
-        double screenAspectRatio = (double) AppApplication.getApp().getScreenWidth()
+        /*double screenAspectRatio = (double) AppApplication.getApp().getScreenWidth()
                 / (double) AppApplication.getApp().getScreenHeight();
+		int w = AppApplication.getApp().getScreenWidth(), h = AppApplication.getApp().getScreenHeight()*/
+        double screenAspectRatio = ((double)UriParser.videoQuality.resX /
+        							(double)UriParser.videoQuality.resY);
+		int w = UriParser.videoQuality.resX, h = UriParser.videoQuality.resY;
+		
         Iterator<Camera.Size> it = supportedPreviewResolutions.iterator();
         while (it.hasNext()) {
             Camera.Size supportedPreviewResolution = it.next();
@@ -347,7 +373,7 @@ public class CameraActivity extends BaseActivity {
                 continue;
             }
 
-            boolean isCandidatePortrait = width > height;
+            boolean isCandidatePortrait = width < height;
             int maybeFlippedWidth = isCandidatePortrait ? height : width;
             int maybeFlippedHeight = isCandidatePortrait ? width : height;
             double aspectRatio = (double) maybeFlippedWidth / (double) maybeFlippedHeight;
@@ -357,8 +383,7 @@ public class CameraActivity extends BaseActivity {
                 continue;
             }
 
-            if (maybeFlippedWidth == AppApplication.getApp().getScreenWidth()
-                    && maybeFlippedHeight == AppApplication.getApp().getScreenHeight()) {
+            if (maybeFlippedWidth == w && maybeFlippedHeight == h) {
                 return supportedPreviewResolution;
             }
         }
@@ -371,8 +396,7 @@ public class CameraActivity extends BaseActivity {
         return defaultPreviewResolution;
     }
 
-    private Camera.Size findBestPictureResolution() {
-        Camera.Parameters cameraParameters = cameraInst.getParameters();
+    private Camera.Size findBestPictureResolution(Camera.Parameters cameraParameters) {
         List<Camera.Size> supportedPicResolutions = cameraParameters.getSupportedPictureSizes();
 
         StringBuilder picResolutionSb = new StringBuilder();
@@ -403,15 +427,18 @@ public class CameraActivity extends BaseActivity {
             }
         });
 
-        double screenAspectRatio = (double) AppApplication.getApp().getScreenWidth()
-                / (double) AppApplication.getApp().getScreenHeight();
+        /*double screenAspectRatio = (double) AppApplication.getApp().getScreenWidth()
+                / (double) AppApplication.getApp().getScreenHeight();*/
+        double screenAspectRatio = ((double)UriParser.videoQuality.resX /
+        							(double)UriParser.videoQuality.resY);              
+		
         Iterator<Camera.Size> it = sortedSupportedPicResolutions.iterator();
         while (it.hasNext()) {
             Camera.Size supportedPreviewResolution = it.next();
             int width = supportedPreviewResolution.width;
             int height = supportedPreviewResolution.height;
 
-            boolean isCandidatePortrait = width > height;
+            boolean isCandidatePortrait = width < height;
             int maybeFlippedWidth = isCandidatePortrait ? height : width;
             int maybeFlippedHeight = isCandidatePortrait ? width : height;
             double aspectRatio = (double) maybeFlippedWidth / (double) maybeFlippedHeight;

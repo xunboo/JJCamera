@@ -66,8 +66,9 @@
     <string name="camera_switch">Switch&#10;Camera</string>
     <string name="camera_record">Record</string>
 
-    <string name="record_start">Record start</string>
-    <string name="record_stop">Record stop</string>
+    <string name="record_start">Recording started</string>
+    <string name="record_stop">Recording stopped</string>
+    <string name="record_interrupt">Recording interrupted</string>  
 
     <!-- Shown as a link in the About screen of the app; user can click to see the Terms of Services. -->
     <string name="about_terms">Terms of Service</string>

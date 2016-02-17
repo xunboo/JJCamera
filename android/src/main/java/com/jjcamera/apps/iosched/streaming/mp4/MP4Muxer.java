@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -17,14 +18,21 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 
+import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.MovieHeaderBox;
+import com.coremedia.iso.boxes.TrackBox;
+import com.coremedia.iso.boxes.TrackHeaderBox;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Mp4TrackImpl;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.tracks.AACTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
+import com.googlecode.mp4parser.util.Matrix;
+import com.googlecode.mp4parser.util.Path;
 import com.jjcamera.apps.iosched.streaming.rtsp.UriParser;
 import com.jjcamera.apps.iosched.util.SDCardUtils;
 
@@ -48,11 +56,13 @@ public class MP4Muxer {
 		public String mVideoName;
 		public String mAudioName;
 		public String mMp4Name;
+		public Matrix mMatrix;
 	}
 
 	final BlockingQueue<MP4Info> linkedBlockingQueue = new LinkedBlockingQueue<MP4Info>();
 	private MP4Info mMP4Info;
 
+	private static Matrix sMatrix = Matrix.ROTATE_0;
 	// The MP4Muxer implements the singleton pattern
 	private static volatile MP4Muxer sMuxerInst = null;
 
@@ -116,12 +126,44 @@ public class MP4Muxer {
 	public synchronized void setAudioReady(){
 		mMP4Info.mAudioName = mAudioFile;
 	}
-	
+
+	public static void setRotationMatrix(int iDegree){
+	 	if(iDegree == 90)
+			sMatrix = Matrix.ROTATE_90;
+		else if(iDegree == 180)
+			sMatrix = Matrix.ROTATE_180;
+		else
+			sMatrix = Matrix.ROTATE_0;
+	}
+
+	/*private Matrix getRotationMatrix(){
+		int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
+		Matrix m = Matrix.ROTATE_0;
+		switch (rotation) {
+		    case Surface.ROTATION_0:
+		        m = Matrix.ROTATE_90;
+		        break;
+		    case Surface.ROTATION_90:
+		        m = Matrix.ROTATE_0;
+		        break;
+		    case Surface.ROTATION_180:
+		        m = Matrix.ROTATE_90;
+		        break;
+		    case Surface.ROTATION_270:
+		        m = Matrix.ROTATE_180;
+		        break;
+		}	
+
+		return m;
+	}*/
+		
 	/** the orginal files is collecting. **/
 	public synchronized void collect(){		
 		try {
 			String timeStamp = new SimpleDateFormat("/yyyy_MM_dd_HH_mm_ss").format(new Date());
-			mMP4Info.mMp4Name = timeStamp + ".mp4";		
+			mMP4Info.mMp4Name = timeStamp + ".mp4";	
+			mMP4Info.mMatrix = sMatrix;
+			
 			linkedBlockingQueue.put(mMP4Info);
 
 			mHandler.post(new Runnable() {
@@ -129,7 +171,7 @@ public class MP4Muxer {
 				public void run() {
 					try {
 						MP4Info mi = linkedBlockingQueue.take();
-						muxerFile(mi.mVideoName, mi.mAudioName, mi.mMp4Name);
+						muxerFile(mi);
 					}catch (InterruptedException e) {
 					}
 				}				
@@ -146,7 +188,8 @@ public class MP4Muxer {
 			mMP4Info = new MP4Info();
 			mMP4Info.mVideoName = mVideoFile;
 			mMP4Info.mAudioName = mAudioFile;
-			mMP4Info.mMp4Name = timeStamp + ".mp4";		
+			mMP4Info.mMp4Name = timeStamp + ".mp4";	
+			mMP4Info.mMatrix = sMatrix;
 			linkedBlockingQueue.put(mMP4Info);
 
 			mHandler.post(new Runnable() {
@@ -154,7 +197,7 @@ public class MP4Muxer {
 				public void run() {
 					try {
 						MP4Info mi = linkedBlockingQueue.take();
-						muxerFile(mi.mVideoName, mi.mAudioName, mi.mMp4Name);
+						muxerFile(mi);
 					}catch (InterruptedException e) {
 					}
 				}				
@@ -166,9 +209,36 @@ public class MP4Muxer {
 	}	
 	
 	public static void muxerFileDebug(){
+		try 
+		{
+			File input = new File(SDCardUtils.getExternalSdCardPath() + "/a.h264");
+			File output = new File(SDCardUtils.getExternalSdCardPath() + "/b.mp4");
+
+			H264TrackImpl h264Track = new H264TrackImpl(new FileDataSourceImpl(input), "eng", UriParser.videoQuality.framerate, 1);
+			Movie m = new Movie();
+			m.addTrack(h264Track);
+			m.setMatrix(Matrix.ROTATE_90);
+			Container out = new DefaultMp4Builder().build(m);
+			MovieHeaderBox mvhd = Path.getPath(out, "moov/mvhd");
+    		mvhd.setMatrix(Matrix.ROTATE_90);
+			TrackBox trackBox  = Path.getPath(out, "moov/trak");
+			TrackHeaderBox tkhd = trackBox.getTrackHeaderBox();
+			tkhd.setMatrix(Matrix.ROTATE_90);
+			FileChannel fc = new FileOutputStream(output.getAbsolutePath()).getChannel();
+			out.writeContainer(fc);
+			fc.close();
+
+		} 
+		catch (IOException e) {
+		    Log.e("test", "some exception", e);
+		}	
 	}
 
-	private static void muxerFile(String videoFile, String audioFile, String outputFile){		
+	private static void muxerFile(MP4Info mi){		
+
+		String videoFile = mi.mVideoName, audioFile = mi.mAudioName, outputFile = mi.mMp4Name;
+		Matrix mMatrix = mi.mMatrix;
+			
 		try {
 			Log.i(TAG,  "generate a MP4 file...");
 			
@@ -181,7 +251,9 @@ public class MP4Muxer {
 		 		aacTrack = new AACTrackImpl(new FileDataSourceImpl(audioFile));
 
 			Movie movie = new Movie();
+			movie.setMatrix(mMatrix);
 			movie.addTrack(h264Track);
+			h264Track.getTrackMetaData().setMatrix(mMatrix);
 			if(aacTrack != null){
 				/*
 					In AAC there are always samplerate/1024 sample/s so each sample's duration is 1000 * 1024 / samplerate milliseconds.
@@ -202,18 +274,18 @@ public class MP4Muxer {
 
 			Container mp4file = new DefaultMp4Builder().build(movie);
 
-			FileChannel fc = new FileOutputStream(new File(SDCardUtils.getExternalSdCardPath() + outputFile)).getChannel();
+			FileChannel fc = new FileOutputStream(new File(SDCardUtils.getExternalSdCardPathForVideo() + outputFile)).getChannel();
 			mp4file.writeContainer(fc);
 			fc.close();
 
 			Log.i(TAG, "finish a MP4 file...");
-
-			new File(videoFile).delete();
-        	new File(audioFile).delete();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
-		}		
+		}	
+
+		new File(videoFile).delete();
+        new File(audioFile).delete();
 	}
 	
 }

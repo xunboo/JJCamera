@@ -105,7 +105,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		try {
 			while (!Thread.interrupted() && !mStopped) {
 
-				if(MP4Muxer.getInstance().getVideoReady()){
+				if(os!=null && MP4Muxer.getInstance().getVideoReady()){		
+					os.flush();
+					os.close();
+				
 					MP4Muxer.getInstance().setAudioReady();
 					MP4Muxer.getInstance().collect();
 

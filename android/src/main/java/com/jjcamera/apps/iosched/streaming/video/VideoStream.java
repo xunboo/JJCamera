@@ -371,7 +371,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX, mRequestedQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);	//setPreviewFpsRangeset match with fps
 			//if(mOrientation == 90)
-			//	mMediaRecorder.setOrientationHint(90);				
+				//mMediaRecorder.setOrientationHint(90);				
 
 			// The bandwidth actually consumed is often above what was requested 
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
@@ -432,7 +432,7 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	static public FileOutputStream createTempRecorder(){
-		final String H264FILE = SDCardUtils.getExternalSdCardPath()+"/recorder" + (new Date()).getTime() + ".h264";
+		final String H264FILE = SDCardUtils.getExternalSdCardPathForVideo()+"/recorder" + (new Date()).getTime() + ".h264";
 
 		Log.i(TAG,"Saving temp H264 file at: "+H264FILE);
 
@@ -445,7 +445,7 @@ public abstract class VideoStream extends MediaStream {
 			MP4Muxer.getInstance().setVideoSource(H264FILE);
 		} catch (IOException e) {
 			//throw new StorageUnavailableException(e.getMessage());
-			UIUtils.exceptionToast(SessionBuilder.getInstance().getContext(), e.getMessage());
+			UIUtils.DisplayToast(SessionBuilder.getInstance().getContext(), e.getMessage());
 		}
 		return fop;
 	}

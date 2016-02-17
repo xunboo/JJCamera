@@ -652,7 +652,7 @@ public class UIUtils {
         return paintDrawable;
     }
 
-	public static void exceptionToast(Context context, String message) {
+	public static void DisplayToast(Context context, String message) {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show();
 	}
 

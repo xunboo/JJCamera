@@ -262,7 +262,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			}
 		}
 
-		if(type == 5){
+		if(type == 5 && os!=null){
 			long time = MP4Muxer.getInstance().getVideoStartTime();
 			long now = System.nanoTime();
 
@@ -270,6 +270,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				MP4Muxer.getInstance().setVideoStartTime(now);
 			}
 			else if((now - time) > 60000000000L){		// 1 min
+				os.flush();
+				os.close();
+				
 				MP4Muxer.getInstance().setVideoReady();
 				FileOutputStream fop = VideoStream.createTempRecorder();
 				setOutputStream(fop);

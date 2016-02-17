@@ -139,7 +139,7 @@ public abstract class AudioStream  extends MediaStream {
 	}
 
 	static public FileOutputStream createTempRecorder(){
-		final String AACFILE = SDCardUtils.getExternalSdCardPath()+"/recorder" + (new Date()).getTime() + ".aac";
+		final String AACFILE = SDCardUtils.getExternalSdCardPathForVideo()+"/recorder" + (new Date()).getTime() + ".aac";
 
 		Log.i(TAG, "Saving temp AACFILE file at: " + AACFILE);
 
@@ -152,7 +152,7 @@ public abstract class AudioStream  extends MediaStream {
 			MP4Muxer.getInstance().setAudioSource(AACFILE);
 		} catch (IOException e) {
 			//throw new StorageUnavailableException(e.getMessage());
-			UIUtils.exceptionToast(SessionBuilder.getInstance().getContext(), e.getMessage());
+			UIUtils.DisplayToast(SessionBuilder.getInstance().getContext(), e.getMessage());
 		}
 		return fop;
 	}
