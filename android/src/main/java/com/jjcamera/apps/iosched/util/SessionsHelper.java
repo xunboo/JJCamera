@@ -27,7 +27,6 @@ import android.support.v4.app.ShareCompat;
 import com.jjcamera.apps.iosched.BuildConfig;
 import com.jjcamera.apps.iosched.R;
 import com.jjcamera.apps.iosched.appwidget.ScheduleWidgetProvider;
-import com.jjcamera.apps.iosched.map.MapActivity;
 import com.jjcamera.apps.iosched.provider.ScheduleContract;
 import com.jjcamera.apps.iosched.sync.SyncHelper;
 
@@ -48,10 +47,10 @@ public class SessionsHelper {
     }
 
     public void startMapActivity(String roomId) {
-        Intent intent = new Intent(mActivity.getApplicationContext(), MapActivity.class);
+    /*    Intent intent = new Intent(mActivity.getApplicationContext(), MapActivity.class);
         intent.putExtra(MapActivity.EXTRA_ROOM, roomId);
         intent.putExtra(MapActivity.EXTRA_DETACHED_MODE, true);
-        mActivity.startActivity(intent);
+        mActivity.startActivity(intent);*/
     }
 
     public Intent createShareIntent(int messageTemplateResId, String title, String hashtags,

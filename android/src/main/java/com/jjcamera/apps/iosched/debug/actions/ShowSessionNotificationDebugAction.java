@@ -25,7 +25,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 
 import com.jjcamera.apps.iosched.R;
-import com.jjcamera.apps.iosched.map.MapActivity;
 import com.jjcamera.apps.iosched.provider.ScheduleContract;
 import com.jjcamera.apps.iosched.debug.DebugAction;
 import com.jjcamera.apps.iosched.util.UIUtils;
@@ -38,7 +37,7 @@ public class ShowSessionNotificationDebugAction implements DebugAction {
     @Override
     public void run(Context context, Callback callback) {
 
-        Intent i = new Intent(Intent.ACTION_VIEW,
+    /*    Intent i = new Intent(Intent.ACTION_VIEW,
                 ScheduleContract.Sessions.buildSessionUri("__keynote__"));
 
         PendingIntent pi = PendingIntent.getActivity(context, 0, i, PendingIntent.FLAG_CANCEL_CURRENT);
@@ -75,7 +74,7 @@ public class ShowSessionNotificationDebugAction implements DebugAction {
 
         NotificationManager nm = (NotificationManager) context.getSystemService(
                 Context.NOTIFICATION_SERVICE);
-        nm.notify(32534, richNotification.build());
+        nm.notify(32534, richNotification.build());*/
 
 
     }

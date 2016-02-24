@@ -29,7 +29,6 @@ import com.jjcamera.apps.iosched.io.*;
 import com.jjcamera.apps.iosched.io.map.model.Tile;
 import com.jjcamera.apps.iosched.provider.ScheduleContract;
 import com.jjcamera.apps.iosched.util.IOUtils;
-import com.jjcamera.apps.iosched.util.MapUtils;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 
@@ -39,9 +38,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
-import com.larvalabs.svgandroid.SVG;
-import com.larvalabs.svgandroid.SVGBuilder;
-import com.larvalabs.svgandroid.SVGParseException;
 import com.turbomanage.httpclient.BasicHttpClient;
 import com.turbomanage.httpclient.ConsoleRequestLogger;
 import com.turbomanage.httpclient.HttpResponse;
@@ -157,8 +153,8 @@ public class ConferenceDataHandler {
         LOGD(TAG, "Total content provider operations: " + batch.size());
 
         // download or process local map tile overlay files (SVG files)
-        LOGD(TAG, "Processing map overlay files");
-        processMapOverlayFiles(mMapPropertyHandler.getTileOverlays(), downloadsAllowed);
+        //LOGD(TAG, "Processing map overlay files");
+        //processMapOverlayFiles(mMapPropertyHandler.getTileOverlays(), downloadsAllowed);
 
         // finally, push the changes into the Content Provider
         LOGD(TAG, "Applying " + batch.size() + " content provider operations.");
@@ -226,63 +222,6 @@ public class ConferenceDataHandler {
         } finally {
             reader.close();
         }
-    }
-
-    /**
-     * Synchronise the map overlay files either from the local assets (if available) or from a remote url.
-     *
-     * @param collection Set of tiles containing a local filename and remote url.
-     * @throws IOException
-     */
-    private void processMapOverlayFiles(Collection<Tile> collection, boolean downloadAllowed) throws IOException, SVGParseException {
-        // clear the tile cache on disk if any tiles have been updated
-        boolean shouldClearCache = false;
-        // keep track of used files, unused files are removed
-        ArrayList<String> usedTiles = new ArrayList<>();
-        for (Tile tile : collection) {
-            final String filename = tile.filename;
-            final String url = tile.url;
-
-            usedTiles.add(filename);
-
-            if (!MapUtils.hasTile(mContext, filename)) {
-                shouldClearCache = true;
-                // copy or download the tile if it is not stored yet
-                if (MapUtils.hasTileAsset(mContext, filename)) {
-                    // file already exists as an asset, copy it
-                    MapUtils.copyTileAsset(mContext, filename);
-                } else if (downloadAllowed && !TextUtils.isEmpty(url)) {
-                    try {
-                        // download the file only if downloads are allowed and url is not empty
-                        File tileFile = MapUtils.getTileFile(mContext, filename);
-                        BasicHttpClient httpClient = new BasicHttpClient();
-                        httpClient.setRequestLogger(mQuietLogger);
-                        HttpResponse httpResponse = httpClient.get(url, null);
-                        IOUtils.writeToFile(httpResponse.getBody(), tileFile);
-
-                        // ensure the file is valid SVG
-                        InputStream is = new FileInputStream(tileFile);
-                        SVG svg = new SVGBuilder().readFromInputStream(is).build();
-                        is.close();
-                    } catch (IOException ex) {
-                        LOGE(TAG, "FAILED downloading map overlay tile "+url+
-                                ": " + ex.getMessage(), ex);
-                    } catch (SVGParseException ex) {
-                        LOGE(TAG, "FAILED parsing map overlay tile "+url+
-                                ": " + ex.getMessage(), ex);
-                    }
-                } else {
-                    LOGD(TAG, "Skipping download of map overlay tile" +
-                            " (since downloadsAllowed=false)");
-                }
-            }
-        }
-
-        if (shouldClearCache) {
-            MapUtils.clearDiskCache(mContext);
-        }
-
-        MapUtils.removeUnusedTiles(mContext, usedTiles);
     }
 
     // Returns the timestamp of the data we have in the content provider.

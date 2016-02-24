@@ -83,7 +83,6 @@ import com.jjcamera.apps.iosched.framework.QueryEnum;
 import com.jjcamera.apps.iosched.framework.UpdatableView;
 import com.jjcamera.apps.iosched.framework.UserActionEnum;
 import com.jjcamera.apps.iosched.gcm.ServerUtilities;
-import com.jjcamera.apps.iosched.map.MapActivity;
 import com.jjcamera.apps.iosched.camera.CameraActivity;
 import com.jjcamera.apps.iosched.myschedule.MyScheduleActivity;
 import com.jjcamera.apps.iosched.provider.ScheduleContract;
