@@ -63,11 +63,12 @@
         Version %s
     ]]></string>
 
-    <string name="camera_switch">Switch&#10;Camera</string>
-    <string name="camera_record">Record</string>
+    <string name="camera_info">Login&#10;Info</string>
+    <string name="record_start">Start Recording</string>
+    <string name="record_stop">Stop Recording</string>
 
-    <string name="record_start">Recording started</string>
-    <string name="record_stop">Recording stopped</string>
+    <string name="record_recording">Recording</string>
+    <string name="record_previewing">Previewing</string>
     <string name="record_interrupt">Recording interrupted</string>  
 
     <!-- Shown as a link in the About screen of the app; user can click to see the Terms of Services. -->

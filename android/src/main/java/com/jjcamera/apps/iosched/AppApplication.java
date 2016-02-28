@@ -16,13 +16,14 @@
 
 package com.jjcamera.apps.iosched;
 
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
+import com.jjcamera.apps.iosched.ip.IPFinder;
+import com.jjcamera.apps.iosched.ip.UpnpService;
 import com.jjcamera.apps.iosched.settings.SettingsUtils;
 import com.jjcamera.apps.iosched.util.AnalyticsHelper;
 import com.jjcamera.apps.iosched.streaming.SessionBuilder;
-import com.jjcamera.apps.iosched.streaming.video.VideoQuality;
 import com.jjcamera.apps.iosched.streaming.rtsp.RtspServer;
+import com.jjcamera.apps.iosched.util.WiFiUtils;
 
 import android.app.Application;
 import android.content.Context;
@@ -32,8 +33,7 @@ import android.content.ComponentName;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
 
-
-
+import static com.jjcamera.apps.iosched.util.LogUtils.LOGD;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGE;
 import static com.jjcamera.apps.iosched.util.LogUtils.LOGW;
 import static com.jjcamera.apps.iosched.util.LogUtils.makeLogTag;
@@ -97,13 +97,21 @@ public class AppApplication extends Application {
             LOGE(TAG, "Unknown issue trying to install a new security provider.", ignorable);
         }
 
+		IPFinder.getPublicIp();
+
 		SessionBuilder.getInstance() 
 			.setContext(getApplicationContext());
 
-		this.startService(new Intent(this,RtspServer.class));	
+		this.startService(new Intent(this, RtspServer.class));
         bindService(new Intent(this, RtspServer.class), mRtspServiceConnection, Context.BIND_AUTO_CREATE);
+
+		this.startService(new Intent(this, UpnpService.class));
+		LOGW(TAG, "the UPNP service is started");
     }
 
+	// ----------------------------------------------------------
+	// RTSP Listener
+	// ----------------------------------------------------------
 	private ServiceConnection mRtspServiceConnection = new ServiceConnection() {
 	
 		 @Override
@@ -149,10 +157,16 @@ public class AppApplication extends Application {
 		}
 		unbindService(mRtspServiceConnection);
 
+		stopService(new Intent(this, RtspServer.class));
+		stopService(new Intent(this, UpnpService.class));
+		LOGW(TAG, "the UPNP service is stopped");
+
         super.onTerminate();
     }
 
-
+	// ----------------------------------------------------------
+	// Helper
+	// ----------------------------------------------------------
 	public float getScreenDensity() {
 		if (this.displayMetrics == null) {
 			setDisplayMetrics(getResources().getDisplayMetrics());

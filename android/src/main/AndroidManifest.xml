@@ -40,6 +40,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.READ_SYNC_STATS" />
@@ -445,6 +446,8 @@
         <service android:name=".gcm.GCMIntentService" />
 
         <service android:name="com.jjcamera.apps.iosched.streaming.rtsp.RtspServer"/>
+
+        <service android:name="com.jjcamera.apps.iosched.ip.UpnpService"/>
 
         <!-- Data, sync and schedule editing components -->
 

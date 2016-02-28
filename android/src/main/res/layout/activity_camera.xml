@@ -64,7 +64,7 @@
                     style="@style/AboutLink"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:text="@string/camera_record"
+                    android:text="@string/record_start"
                     android:layout_weight="0.33" />
 
                 <TextView
@@ -72,7 +72,7 @@
                     style="@style/AboutLink"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:text="@string/camera_switch"
+                    android:text="@string/camera_info"
                     android:layout_weight="0.33" />
             </LinearLayout>
 

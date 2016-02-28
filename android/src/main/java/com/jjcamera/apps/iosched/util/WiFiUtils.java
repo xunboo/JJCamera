@@ -313,4 +313,48 @@ public class WiFiUtils {
         }
         return null;
     }
+
+	public static String[] getMACAddress()  throws Exception
+    {
+    	InetAddress ia = null;
+
+	    try {
+            for (Enumeration en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = (NetworkInterface)en.nextElement();
+                for (Enumeration enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = (InetAddress)enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()&&inetAddress instanceof Inet4Address) {
+                        ia = inetAddress;
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            LOGE("Socket exception in GetIP Address of Utilities", ex.toString());
+        }
+
+		if( ia == null)		throw new SocketException("null socket") ;
+		
+        byte[] mac = NetworkInterface.getByInetAddress(ia).getHardwareAddress();
+
+        String[] str_array = new String[2];
+        StringBuffer sb1 = new StringBuffer();
+        StringBuffer sb2 = new StringBuffer();
+
+        for (int i = 0; i < mac.length; i++)
+        {
+            if (i != 0)
+            {
+                sb1.append(":");
+            }
+
+            String s = Integer.toHexString(mac[i] & 0xFF);
+            sb1.append(s.length() == 1 ? 0 + s : s);
+            sb2.append(s.length() == 1 ? 0 + s : s);
+        }
+
+        str_array[0] = sb1.toString();
+        str_array[1] = sb2.toString();
+        return str_array;
+        //return sb1.toString().toUpperCase();
+    }
 }

@@ -238,7 +238,21 @@ public class MP4Muxer {
 
 		String videoFile = mi.mVideoName, audioFile = mi.mAudioName, outputFile = mi.mMp4Name;
 		Matrix mMatrix = mi.mMatrix;
-			
+
+		File fVideo = new File(videoFile), fAudio = new File(audioFile);
+
+		if(fVideo.length()==0){
+			fVideo.delete();
+        	fAudio.delete();
+
+			return;
+		}
+
+		if(fAudio.length()==0){
+        	fAudio.delete();
+			audioFile = null;
+		}	
+		
 		try {
 			Log.i(TAG,  "generate a MP4 file...");
 			
@@ -284,8 +298,8 @@ public class MP4Muxer {
 			e.printStackTrace();
 		}	
 
-		new File(videoFile).delete();
-        new File(audioFile).delete();
+		fVideo.delete();
+        fAudio.delete();
 	}
 	
 }

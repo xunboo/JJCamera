@@ -18,6 +18,7 @@ package com.jjcamera.apps.iosched.camera;
 
 import com.jjcamera.apps.iosched.AppApplication;
 import com.jjcamera.apps.iosched.R;
+import com.jjcamera.apps.iosched.ip.IPFinder;
 import com.jjcamera.apps.iosched.streaming.exceptions.CameraInUseException;
 import com.jjcamera.apps.iosched.streaming.mp4.MP4Muxer;
 import com.jjcamera.apps.iosched.streaming.rtsp.UriParser;
@@ -34,6 +35,8 @@ import com.jjcamera.apps.iosched.streaming.gl.SurfaceView;
 import com.jjcamera.apps.iosched.streaming.video.H264Stream;
 
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -103,21 +106,82 @@ public class CameraActivity extends BaseActivity {
 	private Thread mCameraThread;
 	private Looper mCameraLooper;
 
+	public class SessionCallback implements Session.Callback {
+
+		/** 
+		 * Called periodically to inform you on the bandwidth 
+		 * consumption of the streams when streaming. 
+		 */
+		public void onBitrateUpdate(long bitrate){}
+
+		/** Called when some error occurs. */
+		public void onSessionError(int reason, int streamType, Exception e){}
+
+		/** 
+		 * Called when the previw of the {@link VideoStream}
+		 * has correctly been started.
+		 * If an error occurs while starting the preview,
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of {@link Callback#onPreviewStarted()}.
+		 */
+		public void onPreviewStarted(){}
+
+		/** 
+		 * Called when the session has correctly been configured 
+		 * after calling {@link Session#configure()}.
+		 * If an error occurs while configuring the {@link Session},
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of  {@link Callback#onSessionConfigured()}.
+		 */
+		public void onSessionConfigured(){}
+
+		/** 
+		 * Called when the streams of the session have correctly been started.
+		 * If an error occurs while starting the {@link Session},
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of  {@link Callback#onSessionStarted()}. 
+		 */
+		public void onSessionStarted()
+		{
+			RefreshMonitorText();
+		}
+
+		/** Called when the stream of the session have been stopped. */
+		public void onSessionStopped(){}
+
+	}
+
+	private SessionCallback mSessionCallback = new SessionCallback();
+
     private View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
                 case R.id.camera_switch:
-                    switchCamera();
-                    //MP4Muxer.muxerFileDebug();
+                    //MP4Muxer.muxerFileDebug();				
+                    {
+	                    AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+						builder.setMessage("Log in using the following information:\n" +
+                                            "IP: " + IPFinder.getPublicIp() + "\n")
+						       .setCancelable(false)
+						       .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                   public void onClick(DialogInterface dialog, int id) {
+                                       //do things
+                                   }
+                               });
+						AlertDialog alert = builder.create();
+						alert.show();
+                    }
                     break;
                 case R.id.camera_record:
 					if(UriParser.getSession() == null)
 						StartRecordVideo();
 					else
+					{
 						StopRecordVideo();
 					
-                    RefreshMonitorText();
+                    	RefreshMonitorText();
+					}
                     break;
             }
         }
@@ -125,7 +189,10 @@ public class CameraActivity extends BaseActivity {
 
     private void RefreshMonitorText(){
         TextView body = (TextView) rootView.findViewById(R.id.camera_main);
-        body.setText(UriParser.getSession() != null ? R.string.record_start : R.string.record_stop);
+        body.setText(UriParser.getSession() != null ? R.string.record_recording : R.string.record_previewing);
+
+		body = (TextView) rootView.findViewById(R.id.camera_record);
+		body.setText(UriParser.getSession() != null ? R.string.record_stop : R.string.record_start);
     }
 
     private void recordHelper() {
@@ -143,6 +210,7 @@ public class CameraActivity extends BaseActivity {
 					}
 
 					Session session = UriParser.easyparse();
+					session.setCallback(mSessionCallback);
 				 	session.syncConfigure();
 					session.syncStart();			
                 } catch (Exception e) {
